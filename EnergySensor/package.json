@@ -1,0 +1,30 @@
+{
+  "name": "EnergySensor",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Node.js app for reading an energy sensor with a TCRT5000 Reflective Optical Sensor module",
+  "scripts": {
+    "start": "node ./bin/sensor"
+  },
+  "dependencies": {
+    "log4js": "^0.6.22",
+    "moment": "~2.9.0",
+    "nconf": "^0.7.1",
+    "onoff": "~1.0.2",
+    "restler": "~3.2.2"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rjaakke/EnergySensor-App.git"
+  },
+  "author": "Robert Jaakke",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/rjaakke/EnergySensor-App/issues"
+  },
+  "homepage": "https://github.com/rjaakke/EnergySensor-App"
+}

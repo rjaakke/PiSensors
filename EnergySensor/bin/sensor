@@ -1,0 +1,96 @@
+#!/usr/bin/env node
+
+/**
+ * Module dependencies.
+ */
+var app = require('../app');
+var restClient = require('../lib/restclient');
+var log4js = require('log4js');
+var fs = require('fs');
+var nconf = require('nconf')
+  .argv({
+    'id': {
+      describe: 'Specify id of the sensor. This must a unique value!'
+    },
+    'high': {
+      describe: 'Specify the high rate count'
+    },
+    'low': {
+      describe: 'Specify the low rate count!'
+    },
+    'file': {
+      alias: 'f',
+      default: './sensor.json',
+      describe: 'Specify configuration file path.',
+      string: true
+    },
+    'loglevel': {
+      alias: 'l',
+      default: 'debug',
+      describe: 'Specify loglevel, debug or info.',
+      string: true
+    },
+    'url': {
+      default: 'http://localhost:3141',
+      describe: 'Specify url of the sensor server.',
+      string: true
+    }
+  });
+
+/**
+ * Read the config file
+ **/
+nconf.file({
+  file: nconf.get('file')
+});
+
+/**
+ * Set a default for C
+ */
+nconf.defaults({
+  'c': '1'
+});
+
+var logger = log4js.getLogger();
+logger.setLevel(nconf.get('loglevel'));
+
+var url = nconf.get('url');
+
+/**
+ * Set the sensorInfo objetct
+ */
+var sensorInfo = {
+  sensorId: nconf.get('id'),
+  sensorName: nconf.get('name'),
+  sensorUnits: nconf.get('units'),
+  sensorHigh: nconf.get('high'),
+  sensorLow: nconf.get('low'),
+  sensorVolume: nconf.get('volume')
+};
+
+client = new restClient(url);
+
+// Check if the sensorserver is running
+client.validateUrl(function(err) {
+  if (err instanceof Error) {
+    onError(err);
+  }
+  // Check if the sensor is registered and of not do so
+  client.updateSensor(sensorInfo, function(err) {
+    if (err instanceof Error) {
+      onError(err);
+    }
+
+    logger.info('Start reading sensor');
+    //sensor.watch(client.postEventData);
+  });
+});
+
+/**
+ * Event listener for sensor "error" event.
+ */
+
+function onError(error) {
+  logger.error(error);
+  throw error;
+}

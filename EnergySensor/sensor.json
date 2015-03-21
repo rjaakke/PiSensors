@@ -1,0 +1,8 @@
+{
+  "id": 1,
+  "name": "Electriciteit",
+  "units": "kWh",
+  "high": 22330,
+  "low": 24365,
+  "volume": 0.00266666666667
+}
