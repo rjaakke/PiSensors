@@ -1,8 +1,8 @@
 /**
  * Module dependencies.
  */
-var Restler = require('restler');
-var Log4js = require('log4js');
+var restler = require('restler');
+var log4js = require('log4js');
 
 /**
  * [RestClient constructor]
@@ -10,7 +10,7 @@ var Log4js = require('log4js');
  */
 var RestClient = function(url) {
   this.url = url;
-  this.logger = Log4js.getLogger();
+  this.logger = log4js.getLogger();
 
   this.logger.info('Setting up client:', url);
 };
@@ -23,7 +23,7 @@ RestClient.prototype = {
   validateUrl: function(callback) {
     var caller = this;
     // Check if the sensorserver is running
-    Restler.get(this.url).on('complete', function(result) {
+    restler.get(this.url).on('complete', function(result) {
       if (result instanceof Error) {
         callback(result);
       } else {
@@ -40,7 +40,7 @@ RestClient.prototype = {
    */
   updateSensor: function(sensorInfo, callback) {
     var caller = this;
-    Restler.get(caller.url + '/api/sensors/' + sensorInfo.sensorId).on('complete',
+    restler.get(caller.url + '/api/sensors/' + sensorInfo.sensorId).on('complete',
       function(data, result) {
         if (result instanceof Error) {
           caller.logger.error('HTTP GET failed:', result.message);
@@ -49,7 +49,7 @@ RestClient.prototype = {
           if (data) {
             caller.logger.info('Sensor allready registered!');
 
-            Restler.putJson(caller.url + '/api/sensors', {
+            restler.putJson(caller.url + '/api/sensors', {
               sensorInfo: sensorInfo
             }).on('complete',
               function(data, response) {
@@ -64,7 +64,7 @@ RestClient.prototype = {
           } else {
             caller.logger.info("No sensor was registered, registering sensor now.");
 
-            Restler.postJson(caller.url + '/api/sensors', {
+            restler.postJson(caller.url + '/api/sensors', {
               sensorInfo: sensorInfo
             }).on('complete',
               function(data, response) {
@@ -88,7 +88,7 @@ RestClient.prototype = {
    */
   postEventData: function(eventData, callback) {
     var caller = this;
-    Restler.postJson(this.url + '/api/sensorevents', {
+    restler.postJson(this.url + '/api/sensorevents', {
       eventData: eventData
     }).on('complete',
       function(data, response) {
