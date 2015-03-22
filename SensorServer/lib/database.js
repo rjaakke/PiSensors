@@ -272,7 +272,7 @@ Database.prototype = {
   },
 
   /**
-   * Processes SensorEvents for a certain timespan into the MinuteHistory for a sensor.
+   * Processes SensorEvents for a given timespan into the MinuteHistory for a sensor.
    * SensorEvents are deleted after being processed..
    * @param {int}    sensorId Id of the sernsor to retrieve the event for.
    * @param {moment} from     Start of the the timespan to process SensorEvent for.
@@ -330,13 +330,13 @@ Database.prototype = {
     });
   },
 
-  /** TODO: Document this
-   * [updateHistoryEvents description]
-   * @param {[type]}   sensorId [description]
-   * @param {moment} from     Start of the the timespan to process SensorEvent for.
-   * @param {moment} till     End of the the timespan to process SensorEvent for.
-   * @param {[type]}   source   [description]
-   * @param {[type]}   dest     [description]
+  /**
+   * Processes HistoryEvents for a given timespan into the nest History table for a sensor.
+   * @param {int}      sensorId Id of the sernsor to update the events for.
+   * @param {moment}   from     Start of the the timespan to process SensorEvent for.
+   * @param {moment}   till     End of the the timespan to process SensorEvent for.
+   * @param {string}   source   Possible values: MinuteHistory, HourHistory, DayHistory, MonthHistory
+   * @param {string}   dest     Possible values: MinuteHistory, HourHistory, DayHistory, MonthHistory
    * @param {Function} callback [description]
    */
   updateHistoryEvents: function(sensorId, from, till, source, dest, callback) {
@@ -371,7 +371,7 @@ Database.prototype = {
   },
 
   /**
-   * [deleteHistoryEvents description]
+   * Deletes history events from the specified table between a given timespan and sensor.
    * @param {int}      sensorId Id of the sernsor to delete the events for.
    * @param {[type]}   from     Start of the the timespan to process SensorEvent for.
    * @param {moment}   till     End of the the timespan to process SensorEvent for.
