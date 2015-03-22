@@ -6,7 +6,9 @@ var database = new database();
 var router = express.Router();
 var logger = log4js.getLogger();
 
-/* GET welcome message. */
+/**
+ * GET welcome message.
+ */
 router.get('/', function(req, res) {
   res.json({
     message: 'Welcome to Sensor API!'
@@ -16,7 +18,9 @@ router.get('/', function(req, res) {
 
 // SENSOR ROUTES
 // =============================================================================
-//Get all sensors from the Sensors Table
+/**
+ * Get all sensors from the Sensors Table
+ */
 router.route('/sensors').get(function(req, res, next) {
   database.getAllSensors(function(result) {
     if (result instanceof Error) {
@@ -35,7 +39,9 @@ router.route('/sensors').get(function(req, res, next) {
   });
 });
 
-//Get sensors from the Sensors Table
+/**
+ * Get sensors from the Sensors Table
+ */
 router.route('/sensors/:id').get(function(req, res, next) {
 
   var sensorId = req.params.id;
@@ -55,7 +61,9 @@ router.route('/sensors/:id').get(function(req, res, next) {
   });
 });
 
-//Inserts a record in to the Sensors Table
+/**
+ * Inserts a record in to the Sensors Table
+ */
 router.route('/sensors').post(function(req, res, next) {
 
   if (!req.body.hasOwnProperty('sensorinfo')) {
@@ -76,7 +84,9 @@ router.route('/sensors').post(function(req, res, next) {
   });
 });
 
-//Update a record in the Sensors Table
+/**
+ * Update a record in the Sensors Table
+ */
 router.route('/sensors').put(function(req, res, next) {
 
   if (!req.body.hasOwnProperty('sensorinfo')) {
@@ -124,6 +134,47 @@ router.route('/now/:id').get(function(req, res, next) {
 // =============================================================================
 
 /**
+ * Returns a JSON object of the last 10 SensorEvents
+ */
+router.route('/sensorevents').get(function(req, res, next) {
+  database.getSensorEvents(function(result) {
+    if (result instanceof Error) {
+      next(err);
+    } else {
+      if (result.length > 0) {
+        res.json(result);
+        logger.debug('SensorEvents:' + JSON.stringify(result, null, 2));
+      } else {
+        logger.debug('No events recorded!');
+        res.json();
+      }
+    }
+  });
+});
+
+/**
+ * Returns a JSON object of the last 10 SensorEvents for the sesnsor id
+ */
+router.route('/sensorevents/:id').get(function(req, res, next) {
+
+  var sensorId = req.params.id;
+
+  database.getSensorEventsForId(sensorId, function(result) {
+    if (result instanceof Error) {
+      next(err);
+    } else {
+      if (result.length > 0) {
+        res.json(result);
+        logger.debug('SensorEvents:' + JSON.stringify(result, null, 2));
+      } else {
+        logger.debug('No events recorded for sensor with id:', sensorId);
+        res.json();
+      }
+    }
+  });
+});
+
+/**
  * Inserts a record in to the SensorEvents Table
  */
 router.route('/sensorevents').post(function(req, res, next) {
@@ -135,62 +186,14 @@ router.route('/sensorevents').post(function(req, res, next) {
 
   var sensorData = req.body.sensordata;
 
-  //TODO: Move code to Database
-  var stmt = database.db.prepare(
-    'INSERT INTO SensorEvents (SensorId, Time, Rate) VALUES (?,?,?);'
-  );
-  stmt.run(sensorData.id, sensorData.time, sensorData.rate,
-    function(err) {
-      if (err !== null) {
-        // Express handles errors via its next function.
-        next(err);
-      } else {
-        // err is null if insertion was successful
-        logger.debug('New sensorevent created with id: ', this.lastID);
-        res.json(this.lastID);
-      }
-    });
-  stmt.finalize();
-});
-
-//Returns a JSON object of the last SensorEvents
-router.route('/sensorevents').get(function(req, res, next) {
-
-  //TODO: Move code to Database
-  database.db.all('SELECT * FROM SensorEvents ORDER BY Id DESC LIMIT 10', req.params
-    .id,
-    function(err, rows) {
-      if (err !== null) {
-        // Express handles errors via its next function.
-        next(err);
-      } else {
-        logger.debug('Event rows: ' + JSON.stringify(rows));
-        res.json(rows);
-      }
-    });
-});
-
-//Returns a JSON object of the last SensorEvents for the specified SensorId
-router.route('/sensorevents/:id').get(function(req, res, next) {
-  if (req.params.id < 0) {
-    var err = new Error('Error 404: id parameter missing');
-    err.status = 404;
-    next(err);
-  }
-
-  //TODO: Move code to Database
-  database.db.all(
-    'SELECT * FROM SensorEvents WHERE SensorId = ' + req.params.id +
-    ' ORDER BY Id DESC LIMIT 100',
-    function(err, rows) {
-      if (err !== null) {
-        // Express handles errors via its next function.
-        next(err);
-      } else {
-        logger.debug('Event rows: ' + JSON.stringify(rows));
-        res.json(rows);
-      }
-    });
+  database.createSensorEvent(sensorData, function(result) {
+    if (result instanceof Error) {
+      next(err);
+    } else {
+      res.json(result);
+      logger.debug('New sensorevent created with id:', result);
+    }
+  });
 });
 
 module.exports = router;

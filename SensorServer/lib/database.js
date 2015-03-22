@@ -26,6 +26,10 @@ Database.prototype = {
     );
   },
 
+  /**
+   * Returns all rows from the Sensors table.
+   * @param {Function} callback Returns either null or the Error.
+   */
   getAllSensors: function(callback) {
     var logger = this.logger;
 
@@ -41,10 +45,15 @@ Database.prototype = {
       });
   },
 
+  /**
+   * Returns the sensor row for the id from the Sensors table..
+   * @param {int}      sensorId The id of the sensors
+   * @param {Function} callback Returns either the row or the Error.
+   */
   getSensorById: function(sensorId, callback) {
     var logger = this.logger;
 
-    var stmt = this.db.prepare('SELECT * FROM Sensors WHERE Id = ?');
+    var stmt = this.db.prepare('SELECT * FROM Sensors WHERE Id = ?;');
 
     stmt.get(sensorId,
       function(err, row) {
@@ -59,10 +68,15 @@ Database.prototype = {
     stmt.finalize();
   },
 
+  /**
+   * Creates a sensor row in the Sensors table.
+   * @param {sensorInfo} sensorInfo The information object containing the sensor details.
+   * @param {Function}   callback   Returns either the id or the Error.
+   */
   createSensor: function(sensorInfo, callback) {
     var logger = this.logger;
 
-    var stmt = this.db.prepare('INSERT INTO Sensors (Id, Name, Units, High, Low, Volume) VALUES (?,?,?,?,?,?)');
+    var stmt = this.db.prepare('INSERT INTO Sensors (Id, Name, Units, High, Low, Volume) VALUES (?,?,?,?,?,?);');
 
     stmt.run(sensorInfo.id, sensorInfo.name, sensorInfo.units, sensorInfo.high, sensorInfo.low, sensorInfo.volume,
       function(err) {
@@ -77,10 +91,15 @@ Database.prototype = {
     stmt.finalize();
   },
 
+  /**
+   * Updates a sensor row in the Sensor table.
+   * @param {sensorInfo} sensorInfo The information object containing the sensor details.
+   * @param {Function}   callback   Returns either the id or the Error.
+   */
   updateSensor: function(sensorInfo, callback) {
     var logger = this.logger;
 
-    var stmt = this.db.prepare('UPDATE Sensors SET Name = ?, Units = ?, High = ?, Low = ?, Volume = ? WHERE SensorId = ?');
+    var stmt = this.db.prepare('UPDATE Sensors SET Name = ?, Units = ?, High = ?, Low = ?, Volume = ? WHERE SensorId = ?;');
 
     stmt.run(sensorInfo.name, sensorInfo.units, sensorInfo.high, sensorInfo.low, sensorInfo.volume, sensorInfo.id,
       function(err) {
@@ -95,10 +114,15 @@ Database.prototype = {
     stmt.finalize();
   },
 
+  /**
+   * Returns a row with the current usage information for a sensor
+   * @param {int}      sensorId The id of the sensors
+   * @param {Function} callback Returns either the row or the Error.
+   */
   getCurrentUsage: function(sensorId, callback) {
     var logger = this.logger;
 
-    var stmt = this.db.prepare('SELECT High, Low, High + Low AS Total, 3600000 / ((1/Volume) * (Time - (SELECT Time FROM SensorEvents WHERE SensorId = ?1 ORDER BY Id DESC LIMIT 1 OFFSET 1))) * 1000 AS Usage, DateTime(Time/1000, \'unixepoch\', \'localtime\') AS UsageTime FROM SensorEvents AS E JOIN Sensors AS S ON E.SensorId = S.Id  WHERE SensorId = ?1 ORDER BY E.Id DESC LIMIT 1');
+    var stmt = this.db.prepare('SELECT High, Low, High + Low AS Total, 3600000 / ((1/Volume) * (Time - (SELECT Time FROM SensorEvents WHERE SensorId = ?1 ORDER BY Id DESC LIMIT 1 OFFSET 1))) * 1000 AS Usage, DateTime(Time/1000, \'unixepoch\', \'localtime\') AS UsageTime FROM SensorEvents AS E JOIN Sensors AS S ON E.SensorId = S.Id  WHERE SensorId = ?1 ORDER BY E.Id DESC LIMIT 1;');
 
     stmt.get(sensorId,
       function(err, row) {
@@ -113,6 +137,77 @@ Database.prototype = {
     stmt.finalize();
   },
 
+  /**
+   * Returns the last 10 rows for the sensorId from the SensorEvents table.
+   * @param {int}      sensorId The id of the sensors
+   * @param {Function} callback Returns either the row or the Error.
+   */
+  getSensorEvents: function(callback) {
+    var logger = this.logger;
+
+    this.db.all('SELECT * FROM SensorEvents ORDER BY Id DESC LIMIT 10;',
+      function(err, rows) {
+        if (err !== null) {
+          logger.error('Error in method getSensorEvents:', err);
+          callback(err);
+        } else {
+          logger.trace(rows);
+          callback(rows);
+        }
+      });
+  },
+
+  /**
+   * Returns the last 10 rows for the sensorId from the SensorEvents table.
+   * @param {int}      sensorId The id of the sensors
+   * @param {Function} callback Returns either the row or the Error.
+   */
+  getSensorEventsForId: function(sensorId, callback) {
+    var logger = this.logger;
+
+    var stmt = this.db.prepare('SELECT * FROM SensorEvents WHERE SensorId = ? ORDER BY Id DESC LIMIT 10;');
+
+    stmt.all(sensorId,
+      function(err, rows) {
+        if (err !== null) {
+          logger.error('Error in method getSensorEventsForId:', err);
+          callback(err);
+        } else {
+          logger.trace(rows);
+          callback(rows);
+        }
+      });
+    stmt.finalize();
+  },
+
+  /**
+   * Inserts a sensorevent row in the SensorEvents table.
+   * @param {sensordata} sensorData The information object containing the sensor event details.
+   * @param {Function}   callback   Returns either the id or the Error.
+   */
+  createSensorEvent: function(eventData, callback) {
+    var logger = this.logger;
+
+    var stmt = this.db.prepare('INSERT INTO SensorEvents (SensorId, Time, Rate) VALUES (?,?,?);');
+
+    stmt.run(sensorInfo.id, sensorInfo.name, sensorInfo.units, sensorInfo.high, sensorInfo.low, sensorInfo.volume,
+      function(err) {
+        if (err !== null) {
+          logger.error('Error in method createSensorEvent:', err);
+          callback(err);
+        } else {
+          logger.trace(this.lastID);
+          callback(this.lastID);
+        }
+      });
+    stmt.finalize();
+  },
+
+  /** TODO: Document this
+   * [getFirstSensorEvent description]
+   * @param {[type]}   sensorId [description]
+   * @param {Function} callback [description]
+   */
   getFirstSensorEvent: function(sensorId, callback) {
     var insertStmt = this.db.prepare(
       'SELECT Min(Time) as Time FROM SensorEvents WHERE SensorId = $sensorId '
@@ -140,6 +235,12 @@ Database.prototype = {
     insertStmt.finalize();
   },
 
+  /** TODO: Document this
+   * [getLastHistoryEvent description]
+   * @param {[type]}   sensorId    [description]
+   * @param {[type]}   historyType [description]
+   * @param {Function} callback    [description]
+   */
   getLastHistoryEvent: function(sensorId, historyType, callback) {
 
     var insertStmt = this.db.prepare(
@@ -170,6 +271,12 @@ Database.prototype = {
     insertStmt.finalize();
   },
 
+  /** TODO: Document this
+   * [cleanSensorEvents description]
+   * @param {[type]} sensorId [description]
+   * @param {[type]} from     [description]
+   * @param {[type]} till     [description]
+   */
   cleanSensorEvents: function(sensorId, from, till) {
     db.serialize(function() {
       var insertStmt = this.db.prepare(
@@ -222,6 +329,15 @@ Database.prototype = {
     });
   },
 
+  /** TODO: Document this
+   * [updateHistoryEvents description]
+   * @param {[type]}   sensorId [description]
+   * @param {[type]}   from     [description]
+   * @param {[type]}   till     [description]
+   * @param {[type]}   source   [description]
+   * @param {[type]}   dest     [description]
+   * @param {Function} callback [description]
+   */
   updateHistoryEvents: function(sensorId, from, till, source, dest, callback) {
     var insertStmt = this.db.prepare(
       'INSERT OR REPLACE INTO ' + dest + ' (SensorId, Time, Rate, Usage) ' +
@@ -253,6 +369,14 @@ Database.prototype = {
     insertStmt.finalize();
   },
 
+  /**
+   * [deleteHistoryEvents description]
+   * @param {[type]}   sensorId [description]
+   * @param {[type]}   from     [description]
+   * @param {[type]}   till     [description]
+   * @param {[type]}   table    [description]
+   * @param {Function} callback [description]
+   */
   deleteHistoryEvents: function(sensorId, from, till, table, callback) {
     var deleteStmt = this.db.prepare(
       'DELETE From ' + table +
