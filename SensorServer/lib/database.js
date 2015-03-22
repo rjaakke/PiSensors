@@ -26,9 +26,95 @@ Database.prototype = {
     );
   },
 
-  getFirstEvent: function(sensorId, callback) {
+  getAllSensors: function(callback) {
+    var logger = this.logger;
 
-    var insertStmt = db.prepare(
+    this.db.all('SELECT * FROM Sensors',
+      function(err, rows) {
+        if (err !== null) {
+          logger.error('Error in method getAllSensors:', err);
+          callback(err);
+        } else {
+          logger.trace(rows);
+          callback(rows);
+        }
+      });
+  },
+
+  getSensorById: function(sensorId, callback) {
+    var logger = this.logger;
+
+    var stmt = this.db.prepare('SELECT * FROM Sensors WHERE Id = ?');
+
+    stmt.get(sensorId,
+      function(err, row) {
+        if (err !== null) {
+          logger.error('Error in method getSensorById:', err);
+          callback(err);
+        } else {
+          logger.trace(row);
+          callback(row);
+        }
+      });
+    stmt.finalize();
+  },
+
+  createSensor: function(sensorInfo, callback) {
+    var logger = this.logger;
+
+    var stmt = this.db.prepare('INSERT INTO Sensors (Id, Name, Units, High, Low, Volume) VALUES (?,?,?,?,?,?)');
+
+    stmt.run(sensorInfo.id, sensorInfo.name, sensorInfo.units, sensorInfo.high, sensorInfo.low, sensorInfo.volume,
+      function(err) {
+        if (err !== null) {
+          logger.error('Error in method createSensor:', err);
+          callback(err);
+        } else {
+          logger.trace(this.lastID);
+          callback(this.lastID);
+        }
+      });
+    stmt.finalize();
+  },
+
+  updateSensor: function(sensorInfo, callback) {
+    var logger = this.logger;
+
+    var stmt = this.db.prepare('UPDATE Sensors SET Name = ?, Units = ?, High = ?, Low = ?, Volume = ? WHERE SensorId = ?');
+
+    stmt.run(sensorInfo.name, sensorInfo.units, sensorInfo.high, sensorInfo.low, sensorInfo.volume, sensorInfo.id,
+      function(err) {
+        if (err !== null) {
+          logger.error('Error in method updateSensor:', err);
+          callback(err);
+        } else {
+          logger.trace(this.lastID);
+          callback(this.lastID);
+        }
+      });
+    stmt.finalize();
+  },
+
+  getCurrentUsage: function(sensorId, callback) {
+    var logger = this.logger;
+
+    var stmt = this.db.prepare('SELECT High, Low, High + Low AS Total, 3600000 / ((1/Volume) * (Time - (SELECT Time FROM SensorEvents WHERE SensorId = ?1 ORDER BY Id DESC LIMIT 1 OFFSET 1))) * 1000 AS Usage, DateTime(Time/1000, \'unixepoch\', \'localtime\') AS UsageTime FROM SensorEvents AS E JOIN Sensors AS S ON E.SensorId = S.Id  WHERE SensorId = ?1 ORDER BY E.Id DESC LIMIT 1');
+
+    stmt.get(sensorId,
+      function(err, row) {
+        if (err !== null) {
+          logger.error('Error in method getCurrentUsage:', err);
+          callback(err);
+        } else {
+          logger.trace(row);
+          callback(row);
+        }
+      });
+    stmt.finalize();
+  },
+
+  getFirstSensorEvent: function(sensorId, callback) {
+    var insertStmt = this.db.prepare(
       'SELECT Min(Time) as Time FROM SensorEvents WHERE SensorId = $sensorId '
     );
 
@@ -37,15 +123,16 @@ Database.prototype = {
       },
       function(err, row) {
         if (err !== null) {
-          // Express handles errors via its next function.
-          loggger.error(err);
+          this.logger.error(err);
+          callback(err);
         } else {
           // err is null if insertion was successful
+          // TODO: Move result logic out of here
           if (row.Time) {
-            loggger.debug('Oldeste SensorEvent retrieved: ', moment(row.Time).format());
+            this.logger.debug('Oldeste SensorEvent retrieved: ', moment(row.Time).format());
             callback(row.Time);
           } else {
-            loggger.debug('No rows in history table for sensor');
+            this.logger.debug('No rows in history table for sensor');
             callback(moment().valueOf()); // Return now so no rows are processed
           }
         }
@@ -55,7 +142,7 @@ Database.prototype = {
 
   getLastHistoryEvent: function(sensorId, historyType, callback) {
 
-    var insertStmt = db.prepare(
+    var insertStmt = this.db.prepare(
       'SELECT Max(Time) as Time FROM ' + historyType +
       'History WHERE SensorId = $sensorId '
     );
@@ -65,15 +152,16 @@ Database.prototype = {
       },
       function(err, row) {
         if (err !== null) {
-          // Express handles errors via its next function.
-          loggger.error(err);
+          this.logger.error(err);
+          callback(err);
         } else {
           // err is null if insertion was successful
+          // TODO: Move result logic out of here
           if (row.Time) {
-            loggger.debug('Last history event retrieved: ', moment(row.Time).format());
+            this.logger.debug('Last history event retrieved: ', moment(row.Time).format());
             callback(row.Time);
           } else {
-            loggger.debug('No rows in history table for sensor');
+            this.logger.debug('No rows in history table for sensor');
             // Return now - 1 so rows are processed
             callback(moment().minutes(0).seconds(0).subtract(1, historyType + 's').valueOf());
           }
@@ -84,7 +172,7 @@ Database.prototype = {
 
   cleanSensorEvents: function(sensorId, from, till) {
     db.serialize(function() {
-      var insertStmt = db.prepare(
+      var insertStmt = this.db.prepare(
         'INSERT INTO MinuteHistory (SensorId, Time, Rate, Usage) ' +
         'SELECT SensorId, CAST(AVG(Time) - (AVG(Time) % 60000) AS INTEGER) AS Time, Rate, SUM(Volume)AS Usage ' +
         'FROM SensorEvents AS E JOIN Sensors AS S ON E.SensorId = S.Id ' +
@@ -99,16 +187,17 @@ Database.prototype = {
         },
         function(err) {
           if (err !== null) {
-            // Express handles errors via its next function.
-            loggger.error(err);
+            this.logger.error(err);
+            callback(err);
           } else {
             // err is null if insertion was successful
-            loggger.debug('Minute history updated with rowid: ', this.lastID);
+            // TODO: Move result logic out of here
+            this.logger.debug('Minute history updated with rowid: ', this.lastID);
           }
         });
       insertStmt.finalize();
 
-      var deleteStmt = db.prepare(
+      var deleteStmt = this.db.prepare(
         'DELETE From SensorEvents WHERE SensorId = $sensorId AND Time BETWEEN $from AND $till'
       );
 
@@ -119,11 +208,12 @@ Database.prototype = {
         },
         function(err) {
           if (err !== null) {
-            // Express handles errors via its next function.
-            loggger.error(err);
+            this.logger.error(err);
+            callback(err);
           } else {
             // err is null if insertion was successful
-            loggger.debug(
+            // TODO: Move result logic out of here
+            this.logger.debug(
               'Sensorevents table cleand up for minute, rows affected: ',
               this.changes);
           }
@@ -132,8 +222,8 @@ Database.prototype = {
     });
   },
 
-  updateHistory: function(sensorId, from, till, source, dest, callback) {
-    var insertStmt = db.prepare(
+  updateHistoryEvents: function(sensorId, from, till, source, dest, callback) {
+    var insertStmt = this.db.prepare(
       'INSERT OR REPLACE INTO ' + dest + ' (SensorId, Time, Rate, Usage) ' +
       'SELECT SensorId, CAST(AVG(Time) - (AVG(Time) % ' + from.diff(till) + ') AS INTEGER) AS Time, Rate, SUM(Usage)AS Usage ' +
       'FROM ' + source +
@@ -148,11 +238,12 @@ Database.prototype = {
       },
       function(err) {
         if (err !== null) {
-          // Express handles errors via its next function.
-          loggger.error(err);
+          this.logger.error(err);
+          callback(err);
         } else {
           // err is null if insertion was successful
-          loggger.debug('History table was updated with rowid: ', this.lastID);
+          // TODO: Move result logic out of here
+          this.logger.debug('History table was updated with rowid: ', this.lastID);
 
           if (callback) {
             callback(this.lastID);
@@ -162,8 +253,8 @@ Database.prototype = {
     insertStmt.finalize();
   },
 
-  deleteHistory: function(sensorId, from, till, table, callback) {
-    var deleteStmt = db.prepare(
+  deleteHistoryEvents: function(sensorId, from, till, table, callback) {
+    var deleteStmt = this.db.prepare(
       'DELETE From ' + table +
       ' WHERE SensorId = $sensorId AND Time BETWEEN $from AND $till'
     );
@@ -175,11 +266,12 @@ Database.prototype = {
       },
       function(err) {
         if (err !== null) {
-          // Express handles errors via its next function.
-          loggger.error(err);
+          this.logger.error(err);
+          callback(err);
         } else {
           // err is null if insertion was successful
-          loggger.debug(
+          // TODO: Move result logic out of here
+          this.logger.debug(
             'Sensorevents table cleand up for minute, rows affected: ',
             this.changes);
 

@@ -11,10 +11,50 @@ router.get('/', function(req, res) {
   res.json({
     message: 'Welcome to Sensor API!'
   });
+  logger.debug('Welcome to Sensor API!');
 });
 
 // SENSOR ROUTES
 // =============================================================================
+//Get all sensors from the Sensors Table
+router.route('/sensors').get(function(req, res, next) {
+  database.getAllSensors(function(result) {
+    if (result instanceof Error) {
+      next(err);
+    } else {
+      if (result.length > 0) {
+        res.json(result);
+        logger.debug('Sensors:' + JSON.stringify(result, null, 2));
+      } else {
+        res.json({
+          message: 'No sensors registered!'
+        });
+        logger.debug('No sensors registered!');
+      }
+    }
+  });
+});
+
+//Get sensors from the Sensors Table
+router.route('/sensors/:id').get(function(req, res, next) {
+
+  var sensorId = req.params.id;
+
+  database.getSensorById(sensorId, function(result) {
+    if (result instanceof Error) {
+      next(err);
+    } else {
+      if (result) {
+        res.json(result);
+        logger.debug('Sensor:' + JSON.stringify(result, null, 2));
+      } else {
+        logger.debug('No sensor registered with id:', sensorId);
+        res.json();
+      }
+    }
+  });
+});
+
 //Inserts a record in to the Sensors Table
 router.route('/sensors').post(function(req, res, next) {
 
@@ -26,43 +66,14 @@ router.route('/sensors').post(function(req, res, next) {
 
   var sensorInfo = req.body.sensorinfo;
 
-  var stmt = database.db.prepare(
-    'INSERT INTO Sensors (Id, Name, Units, High, Low, Volume) VALUES (?,?,?,?,?,?)'
-  );
-  stmt.run(sensorInfo.id, sensorInfo.name, sensorInfo.units, sensorInfo.high,
-    sensorInfo.low, sensorInfo.volume,
-    function(err) {
-      if (err !== null) {
-        // Express handles errors via its next function.
-        next(err);
-      } else {
-        // err is null if insertion was successful
-        logger.debug('New sensor created with id: ', this.lastID);
-        res.json(this.lastID);
-      }
-    });
-  stmt.finalize();
-});
-
-//Get all sensors from the Sensors Table
-router.route('/sensors').get(function(req, res, next) {
-  database.db.all('SELECT * FROM Sensors',
-    function(err, rows) {
-      if (err !== null) {
-        // Express handles errors via its next function.
-        next(err);
-      } else {
-        if (rows.length > 0) {
-          logger.debug('Getting all sensors: ' + JSON.stringify(rows));
-          res.json(rows);
-        } else {
-          logger.debug('No sensors registered!');
-          res.json({
-            message: 'No sensors registered!'
-          });
-        }
-      }
-    });
+  database.createSensor(sensorInfo, function(result) {
+    if (result instanceof Error) {
+      next(err);
+    } else {
+      res.json(result);
+      logger.debug('New sensor created with id:', result);
+    }
+  });
 });
 
 //Update a record in the Sensors Table
@@ -76,86 +87,37 @@ router.route('/sensors').put(function(req, res, next) {
 
   var sensorInfo = req.body.sensorinfo;
 
-  //TODO: Move code to Database
-  var stmt = database.db.prepare(
-    'UPDATE Sensors SET Name = ?, Units = ?, High = ?, Low = ?, Volume = ?'
-  );
-  stmt.run(sensorInfo.name, sensorInfo.units, sensorInfo.high, sensorInfo.low,
-    sensorInfo.volume,
-    function(err) {
-      if (err !== null) {
-        // Express handles errors via its next function.
-        next(err);
-      } else {
-        // err is null if insertion was successful
-        logger.info('Sensor was updated with values: %s %s',
-          sensorInfo.name, sensorInfo.units);
-        res.json({
-          message: 'Sensor was updated'
-        });
-      }
-    });
-  stmt.finalize();
-});
-
-//Get sensors from the Sensors Table
-router.route('/sensors/:id').get(function(req, res, next) {
-  if (req.params.id < 0) {
-    var err = new Error('Error 404: id parameter missing');
-    err.status = 404;
-    next(err);
-  }
-
-  //TODO: Move code to Database
-  database.db.get('SELECT * FROM Sensors WHERE Id = ' + req.params.id,
-    function(err, row) {
-      if (err !== null) {
-        // Express handles errors via its next function.
-        next(err);
-      } else {
-        if (row) {
-          logger.debug('Getting sensors: ' + JSON.stringify(row));
-          res.json(row);
-        } else {
-          logger.debug('No sensor registered!');
-          res.json();
-        }
-      }
-    });
+  database.updateSensor(sensorInfo, function(result) {
+    if (result instanceof Error) {
+      next(err);
+    } else {
+      res.json(result);
+      logger.debug('Updated sensor with id:', result);
+    }
+  });
 });
 
 /**
  * Current Usage route
  */
-router.route('/sensors/:id/now')
-  //Get sensors from the Sensors Table
-  .get(function(req, res, next) {
-    if (req.params.id < 0) {
-      var err = new Error('Error 404: id parameter missing');
-      err.status = 404;
-      next(err);
-    }
+router.route('/now/:id').get(function(req, res, next) {
 
-    //TODO: Move code to Database
-    database.db.get(
-      'SELECT High, Low, High + Low AS Total, 3600000 / ((1/Volume) * (Time - (SELECT Time FROM SensorEvents ORDER BY Id DESC LIMIT 1 OFFSET 1))) * 1000 AS Usage, DateTime(Time/1000, \'unixepoch\', \'localtime\') AS UsageTime FROM SensorEvents AS E JOIN Sensors AS S ON E.SensorId = S.Id ORDER BY E.Id DESC LIMIT 1',
-      function(err, row) {
-        if (err !== null) {
-          // Express handles errors via its next function.
-          next(err);
-        } else {
-          if (row) {
-            logger.debug('Getting most recent usage: ' + JSON.stringify(row));
-            res.json(row);
-          } else {
-            logger.debug('No sensorevents found!');
-            res.json({
-              message: 'No sensorevents found!'
-            });
-          }
-        }
-      });
+  var sensorId = req.params.id;
+
+  database.getCurrentUsage(sensorId, function(result) {
+    if (result instanceof Error) {
+      next(err);
+    } else {
+      if (result) {
+        res.json(result);
+        logger.debug('Current usage:' + JSON.stringify(result, null, 2));
+      } else {
+        logger.debug('No sensor registered with id:', sensorId);
+        res.json();
+      }
+    }
   });
+});
 
 
 // SENSOREVENT ROUTES
