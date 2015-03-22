@@ -60,12 +60,12 @@ var url = nconf.get('url');
  * Set the sensorInfo objetct
  */
 var sensorInfo = {
-  sensorId: nconf.get('id'),
-  sensorName: nconf.get('name'),
-  sensorUnits: nconf.get('units'),
-  sensorHigh: nconf.get('high'),
-  sensorLow: nconf.get('low'),
-  sensorVolume: nconf.get('volume')
+  id: nconf.get('id'),
+  name: nconf.get('name'),
+  units: nconf.get('units'),
+  high: nconf.get('high'),
+  low: nconf.get('low'),
+  volume: nconf.get('volume')
 };
 
 client = new restClient(url);
@@ -82,6 +82,7 @@ client.validateUrl(function(err) {
     }
 
     logger.info('Start reading sensor');
+    //TODO Uncomment
     //sensor.watch(client.postEventData);
   });
 });

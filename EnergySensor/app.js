@@ -3,7 +3,8 @@
  */
 var moment = require('moment');
 var log4js = require('log4js');
-var GPIO = require('onoff').Gpio;
+//TODO Uncomment
+//var GPIO = require('onoff').Gpio;
 
 /**
  * [App constructor]
@@ -58,7 +59,7 @@ App.prototype = {
           ' current usage:' + currentWatt);
 
         this.onSensorEvent({
-          id: this.sensorInfo.sensorId,
+          sensorId: this.sensorInfo.sensorId,
           time: currentEvent.valueOf(),
           rate: currentRate
         }, function(err) {

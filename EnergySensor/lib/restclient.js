@@ -5,8 +5,8 @@ var restler = require('restler');
 var log4js = require('log4js');
 
 /**
- * [RestClient constructor]
- * @param {[string]} url [is the URL that is used to perfrom all REST operations.]
+ * RestClient constructor
+ * @param {string} url The URL that is used to perfrom all REST operations.
  */
 var RestClient = function(url) {
   this.url = url;
@@ -17,62 +17,66 @@ var RestClient = function(url) {
 
 RestClient.prototype = {
   /**
-   * [validateUrl validates the Url by perfoming e GET request]
-   * @param {Error} callback [Returns either null or the Error.]
+   * validateUrl validates the Url by perfoming e GET request
+   * @param {Error} callback Returns either null or the Error.
    */
   validateUrl: function(callback) {
-    var caller = this;
+    var logger = this.logger;
+
     // Check if the sensorserver is running
-    restler.get(this.url).on('complete', function(result) {
+    restler.get(this.url + '/api').on('complete', function(result) {
       if (result instanceof Error) {
+        logger.error('HTTP GET failed:', result.message);
         callback(result);
       } else {
-        caller.logger.info(result);
+        logger.info(result);
         callback(null);
       }
     });
   },
 
   /**
-   * [updateSensor creates or updates the Sensor and sets the sensor parameters.]
-   * @param {[SensorInfo]}   sensorInfo [Sensor info object containing all sensor information.]
-   * @param {Error} callback [Returns either null or the Error.]
+   * updateSensor creates or updates the Sensor and sets the sensor parameters.
+   * @param {SensorInfo} sensorInfo Object containing all sensor information.
+   * @param {Error}      callback   Returns either null or the Error.
    */
   updateSensor: function(sensorInfo, callback) {
-    var caller = this;
-    restler.get(caller.url + '/api/sensors/' + sensorInfo.sensorId).on('complete',
+    var logger = this.logger;
+    var url = this.url;
+
+    restler.get(url + '/api/sensors/' + sensorInfo.id).on('complete',
       function(data, result) {
         if (result instanceof Error) {
-          caller.logger.error('HTTP GET failed:', result.message);
+          logger.error('HTTP GET failed:', result.message);
           callback(result);
         } else {
           if (data) {
-            caller.logger.info('Sensor allready registered!');
+            logger.info('Sensor allready registered!');
 
-            restler.putJson(caller.url + '/api/sensors', {
-              sensorInfo: sensorInfo
+            restler.putJson(url + '/api/sensors', {
+              sensorinfo: sensorInfo
             }).on('complete',
               function(data, response) {
-                if (response instanceof Error) {
-                  caller.logger.error('HTTP POST failed:', response.message);
+                if (response instanceof Error || response.statusCode != 200) {
+                  logger.error('HTTP POST failed:', response.statusCode);
                   callback(response);
                 } else {
-                  caller.logger.info('Sensor updated with:\n', sensorInfo);
+                  logger.info('Sensor updated with:\n', sensorInfo);
                   callback(null);
                 }
               });
           } else {
-            caller.logger.info("No sensor was registered, registering sensor now.");
+            logger.info("No sensor was registered, registering sensor now.");
 
-            restler.postJson(caller.url + '/api/sensors', {
-              sensorInfo: sensorInfo
+            restler.postJson(url + '/api/sensors', {
+              sensorinfo: sensorInfo
             }).on('complete',
               function(data, response) {
-                if (response instanceof Error) {
-                  caller.logger.error('HTTP POST failed:', respone.message);
+                if (response instanceof Error || response.statusCode != 200) {
+                  logger.error('HTTP POST failed:', response.statusCode);
                   callback(response);
                 } else {
-                  caller.logger.info('Sensor registered with id:', data.toString());
+                  logger.info('Sensor registered with id:', data.toString());
                   callback(null);
                 }
               });
@@ -82,21 +86,22 @@ RestClient.prototype = {
   },
 
   /**
-   * [postEventData sends sensor data JSON object as a POST request to the SensorServer.]
-   * @param {[type]}   eventData [description]
-   * @param {Function} callback  [description]
+   * postEventData sends sensor data JSON object as a POST request to the SensorServer.
+   * @param {eventData} eventData Object containing all data for this event.
+   * @param {Function}  callback  Returns either null or the Error.
    */
   postEventData: function(eventData, callback) {
-    var caller = this;
+    var logger = this.logger;
+
     restler.postJson(this.url + '/api/sensorevents', {
-      eventData: eventData
+      eventdata: eventData
     }).on('complete',
       function(data, response) {
-        if (response instanceof Error) {
-          caller.logger.error('HTTP POST failed:', respone.message);
+        if (response instanceof Error || response.statusCode != 200) {
+          logger.error('HTTP POST failed:', response.statusCode);
           callback(response);
         } else {
-          caller.logger.debug('Server responded with:', data.toString());
+          logger.debug('Server responded with:', data.toString());
           callback(null);
         }
       });

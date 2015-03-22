@@ -24,7 +24,7 @@ router.get('/', function(req, res) {
 router.route('/sensors').get(function(req, res, next) {
   database.getAllSensors(function(result) {
     if (result instanceof Error) {
-      next(err);
+      next(result);
     } else {
       if (result.length > 0) {
         res.json(result);
@@ -48,7 +48,7 @@ router.route('/sensors/:id').get(function(req, res, next) {
 
   database.getSensorById(sensorId, function(result) {
     if (result instanceof Error) {
-      next(err);
+      next(result);
     } else {
       if (result) {
         res.json(result);
@@ -70,18 +70,18 @@ router.route('/sensors').post(function(req, res, next) {
     var err = new Error('Error 400: Post syntax incorrect.');
     err.status = 400;
     next(err);
+  } else {
+    var sensorInfo = req.body.sensorinfo;
+
+    database.createSensor(sensorInfo, function(result) {
+      if (result instanceof Error) {
+        next(result);
+      } else {
+        res.json(result);
+        logger.debug('New sensor created with id:', result);
+      }
+    });
   }
-
-  var sensorInfo = req.body.sensorinfo;
-
-  database.createSensor(sensorInfo, function(result) {
-    if (result instanceof Error) {
-      next(err);
-    } else {
-      res.json(result);
-      logger.debug('New sensor created with id:', result);
-    }
-  });
 });
 
 /**
@@ -93,18 +93,18 @@ router.route('/sensors').put(function(req, res, next) {
     var err = new Error('Error 400: Post syntax incorrect.');
     err.status = 400;
     next(err);
+  } else {
+    var sensorInfo = req.body.sensorinfo;
+
+    database.updateSensor(sensorInfo, function(result) {
+      if (result instanceof Error) {
+        next(result);
+      } else {
+        res.json(result);
+        logger.debug('Updated sensor with:', sensorInfo);
+      }
+    });
   }
-
-  var sensorInfo = req.body.sensorinfo;
-
-  database.updateSensor(sensorInfo, function(result) {
-    if (result instanceof Error) {
-      next(err);
-    } else {
-      res.json(result);
-      logger.debug('Updated sensor with id:', result);
-    }
-  });
 });
 
 /**
@@ -116,14 +116,14 @@ router.route('/now/:id').get(function(req, res, next) {
 
   database.getCurrentUsage(sensorId, function(result) {
     if (result instanceof Error) {
-      next(err);
+      next(result);
     } else {
       if (result) {
         res.json(result);
         logger.debug('Current usage:' + JSON.stringify(result, null, 2));
       } else {
-        logger.debug('No sensor registered with id:', sensorId);
         res.json();
+        logger.debug('No sensor registered with id:', sensorId);
       }
     }
   });
@@ -139,7 +139,7 @@ router.route('/now/:id').get(function(req, res, next) {
 router.route('/sensorevents').get(function(req, res, next) {
   database.getSensorEvents(function(result) {
     if (result instanceof Error) {
-      next(err);
+      next(result);
     } else {
       if (result.length > 0) {
         res.json(result);
@@ -161,7 +161,7 @@ router.route('/sensorevents/:id').get(function(req, res, next) {
 
   database.getSensorEventsForId(sensorId, function(result) {
     if (result instanceof Error) {
-      next(err);
+      next(result);
     } else {
       if (result.length > 0) {
         res.json(result);
@@ -179,21 +179,22 @@ router.route('/sensorevents/:id').get(function(req, res, next) {
  */
 router.route('/sensorevents').post(function(req, res, next) {
 
-  if (!req.body.hasOwnProperty('sensordata')) {
-    res.statusCode = 400;
-    return res.send('Error 400: Post syntax incorrect.');
+  if (!req.body.hasOwnProperty('eventdata')) {
+    var err = new Error('Error 400: Post syntax incorrect.');
+    err.status = 400;
+    next(err);
+  } else {
+    var eventData = req.body.eventdata;
+
+    database.createSensorEvent(eventData, function(result) {
+      if (result instanceof Error) {
+        next(result);
+      } else {
+        res.json(result);
+        logger.debug('New sensorevent created with id:', result);
+      }
+    });
   }
-
-  var sensorData = req.body.sensordata;
-
-  database.createSensorEvent(sensorData, function(result) {
-    if (result instanceof Error) {
-      next(err);
-    } else {
-      res.json(result);
-      logger.debug('New sensorevent created with id:', result);
-    }
-  });
 });
 
 module.exports = router;

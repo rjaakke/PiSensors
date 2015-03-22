@@ -14,13 +14,13 @@ Database.prototype = {
   setupDatabase: function() {
     this.logger.info('Setting up database', this.db.filename);
 
-    this.db.run(
+    this.db.exec(
       'CREATE TABLE if not exists Sensors (Id INTEGER PRIMARY KEY UNIQUE, Name STRING, Units STRING, High REAL, Low REAL, Volume REAL);' +
-      'CREATE TABLE if not exists SensorEvents (Id INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE, SensorId INTEGER, Time INTEGER UNIQUE, Rate INTEGER, FOREIGN KEY(SensorId) REFERENCES Sensors(id));' +
-      'CREATE TABLE if not exists `MinuteHistory` (Id	INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE, SensorId INTEGER, Time INTEGER UNIQUE, Rate INTEGER, Usage REAL, FOREIGN KEY(SensorId) REFERENCES Sensors(id));' +
-      'CREATE TABLE if not exists `HourHistory` (Id	INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE, SensorId INTEGER, Time INTEGER UNIQUE, Rate INTEGER, Usage REAL, FOREIGN KEY(SensorId) REFERENCES Sensors(id));' +
-      'CREATE TABLE if not exists `DayHistory` (Id	INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE, SensorId INTEGER, Time INTEGER UNIQUE, Rate INTEGER, Usage REAL, FOREIGN KEY(SensorId) REFERENCES Sensors(id));' +
-      'CREATE TABLE if not exists `MonthHistory` (Id	INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE, SensorId INTEGER, Time INTEGER UNIQUE, Rate INTEGER, Usage REAL, FOREIGN KEY(SensorId) REFERENCES Sensors(id));' +
+      'CREATE TABLE if not exists SensorEvents (Id INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE, SensorId INTEGER, Time INTEGER, Rate INTEGER, UNIQUE(Time, SensorId), FOREIGN KEY(SensorId) REFERENCES Sensors(id));' +
+      'CREATE TABLE if not exists `MinuteHistory` (Id	INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE, SensorId INTEGER, Time INTEGER, Rate INTEGER, Usage REAL, UNIQUE(Time, SensorId), FOREIGN KEY(SensorId) REFERENCES Sensors(id));' +
+      'CREATE TABLE if not exists `HourHistory` (Id	INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE, SensorId INTEGER, Time INTEGER, Rate INTEGER, Usage REAL, UNIQUE(Time, SensorId), FOREIGN KEY(SensorId) REFERENCES Sensors(id));' +
+      'CREATE TABLE if not exists `DayHistory` (Id	INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE, SensorId INTEGER, Time INTEGER, Rate INTEGER, Usage REAL, UNIQUE(Time, SensorId), FOREIGN KEY(SensorId) REFERENCES Sensors(id));' +
+      'CREATE TABLE if not exists `MonthHistory` (Id	INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE, SensorId INTEGER, Time INTEGER, Rate INTEGER, Usage REAL, UNIQUE(Time, SensorId), FOREIGN KEY(SensorId) REFERENCES Sensors(id));' +
       'CREATE TRIGGER if not exists UpdateSensorLow AFTER INSERT ON SensorEvents WHEN NEW.Rate = 1 BEGIN UPDATE Sensors SET Low = Low + Volume where Id = NEW.SensorId; END;' +
       'CREATE TRIGGER if not exists UpdateSensorHigh AFTER INSERT ON SensorEvents WHEN NEW.Rate = 2 BEGIN UPDATE Sensors SET High = High + Volume where Id = NEW.SensorId; END;'
     );
@@ -76,7 +76,7 @@ Database.prototype = {
   createSensor: function(sensorInfo, callback) {
     var logger = this.logger;
 
-    var stmt = this.db.prepare('INSERT INTO Sensors (Id, Name, Units, High, Low, Volume) VALUES (?,?,?,?,?,?);');
+    var stmt = this.db.prepare('INSERT INTO Sensors (Id, Name, Units, High, Low, Volume) VALUES (?,?,?,?,?,?)');
 
     stmt.run(sensorInfo.id, sensorInfo.name, sensorInfo.units, sensorInfo.high, sensorInfo.low, sensorInfo.volume,
       function(err) {
@@ -99,7 +99,7 @@ Database.prototype = {
   updateSensor: function(sensorInfo, callback) {
     var logger = this.logger;
 
-    var stmt = this.db.prepare('UPDATE Sensors SET Name = ?, Units = ?, High = ?, Low = ?, Volume = ? WHERE SensorId = ?;');
+    var stmt = this.db.prepare('UPDATE Sensors SET Name = ?, Units = ?, High = ?, Low = ?, Volume = ? WHERE Id = ?;');
 
     stmt.run(sensorInfo.name, sensorInfo.units, sensorInfo.high, sensorInfo.low, sensorInfo.volume, sensorInfo.id,
       function(err) {
@@ -190,7 +190,7 @@ Database.prototype = {
 
     var stmt = this.db.prepare('INSERT INTO SensorEvents (SensorId, Time, Rate) VALUES (?,?,?);');
 
-    stmt.run(sensorInfo.id, sensorInfo.name, sensorInfo.units, sensorInfo.high, sensorInfo.low, sensorInfo.volume,
+    stmt.run(eventData.sensorId, eventData.time, eventData.rate,
       function(err) {
         if (err !== null) {
           logger.error('Error in method createSensorEvent:', err);

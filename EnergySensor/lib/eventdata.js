@@ -1,5 +1,5 @@
 module.exports = {
-  id: null,
+  sensorId: null,
   time: null,
   rate: null
 };
