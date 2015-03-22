@@ -203,10 +203,10 @@ Database.prototype = {
     stmt.finalize();
   },
 
-  /** TODO: Document this
-   * [getFirstSensorEvent description]
-   * @param {[type]}   sensorId [description]
-   * @param {Function} callback [description]
+  /**
+   * Returns the first(oldest) sensorevent from the SensorEvent table.
+   * @param {int}      sensorId Id of the sernsor to retrieve the event for.
+   * @param {Function} callback Returns either unixepoch or an error.
    */
   getFirstSensorEvent: function(sensorId, callback) {
     var insertStmt = this.db.prepare(
@@ -235,11 +235,11 @@ Database.prototype = {
     insertStmt.finalize();
   },
 
-  /** TODO: Document this
-   * [getLastHistoryEvent description]
-   * @param {[type]}   sensorId    [description]
-   * @param {[type]}   historyType [description]
-   * @param {Function} callback    [description]
+  /**
+   * Returns the last recorded history event.
+   * @param {int}      sensorId    Id of the sernsor to retrieve the event for.
+   * @param {sting}    historyType Possible values: MinuteHistory, HourHistory, DayHistory, MonthHistory
+   * @param {Function} callback    Returns either unixepoch or an error.
    */
   getLastHistoryEvent: function(sensorId, historyType, callback) {
 
@@ -271,11 +271,12 @@ Database.prototype = {
     insertStmt.finalize();
   },
 
-  /** TODO: Document this
-   * [cleanSensorEvents description]
-   * @param {[type]} sensorId [description]
-   * @param {[type]} from     [description]
-   * @param {[type]} till     [description]
+  /**
+   * Processes SensorEvents for a certain timespan into the MinuteHistory for a sensor.
+   * SensorEvents are deleted after being processed..
+   * @param {int}    sensorId Id of the sernsor to retrieve the event for.
+   * @param {moment} from     Start of the the timespan to process SensorEvent for.
+   * @param {moment} till     End of the the timespan to process SensorEvent for.
    */
   cleanSensorEvents: function(sensorId, from, till) {
     db.serialize(function() {
@@ -332,8 +333,8 @@ Database.prototype = {
   /** TODO: Document this
    * [updateHistoryEvents description]
    * @param {[type]}   sensorId [description]
-   * @param {[type]}   from     [description]
-   * @param {[type]}   till     [description]
+   * @param {moment} from     Start of the the timespan to process SensorEvent for.
+   * @param {moment} till     End of the the timespan to process SensorEvent for.
    * @param {[type]}   source   [description]
    * @param {[type]}   dest     [description]
    * @param {Function} callback [description]
@@ -371,11 +372,11 @@ Database.prototype = {
 
   /**
    * [deleteHistoryEvents description]
-   * @param {[type]}   sensorId [description]
-   * @param {[type]}   from     [description]
-   * @param {[type]}   till     [description]
-   * @param {[type]}   table    [description]
-   * @param {Function} callback [description]
+   * @param {int}      sensorId Id of the sernsor to delete the events for.
+   * @param {[type]}   from     Start of the the timespan to process SensorEvent for.
+   * @param {moment}   till     End of the the timespan to process SensorEvent for.
+   * @param {string}   table    Possible values: MinuteHistory, HourHistory, DayHistory, MonthHistory
+   * @param {Function} callback Return the number of affected rows or an Error
    */
   deleteHistoryEvents: function(sensorId, from, till, table, callback) {
     var deleteStmt = this.db.prepare(
