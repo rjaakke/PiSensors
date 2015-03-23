@@ -20,7 +20,6 @@ Database.prototype = {
       'CREATE TABLE if not exists `MinuteHistory` (Id	INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE, SensorId INTEGER, Time INTEGER, Rate INTEGER, Usage REAL, UNIQUE(Time, SensorId), FOREIGN KEY(SensorId) REFERENCES Sensors(id));' +
       'CREATE TABLE if not exists `HourHistory` (Id	INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE, SensorId INTEGER, Time INTEGER, Rate INTEGER, Usage REAL, UNIQUE(Time, SensorId), FOREIGN KEY(SensorId) REFERENCES Sensors(id));' +
       'CREATE TABLE if not exists `DayHistory` (Id	INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE, SensorId INTEGER, Time INTEGER, Rate INTEGER, Usage REAL, UNIQUE(Time, SensorId), FOREIGN KEY(SensorId) REFERENCES Sensors(id));' +
-      'CREATE TABLE if not exists `MonthHistory` (Id	INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE, SensorId INTEGER, Time INTEGER, Rate INTEGER, Usage REAL, UNIQUE(Time, SensorId), FOREIGN KEY(SensorId) REFERENCES Sensors(id));' +
       'CREATE TRIGGER if not exists UpdateSensorLow AFTER INSERT ON SensorEvents WHEN NEW.Rate = 1 BEGIN UPDATE Sensors SET Low = Low + Volume where Id = NEW.SensorId; END;' +
       'CREATE TRIGGER if not exists UpdateSensorHigh AFTER INSERT ON SensorEvents WHEN NEW.Rate = 2 BEGIN UPDATE Sensors SET High = High + Volume where Id = NEW.SensorId; END;'
     );
@@ -39,7 +38,7 @@ Database.prototype = {
           logger.error('Error in method getAllSensors:', err);
           callback(err);
         } else {
-          logger.trace(rows);
+          logger.trace('Rows:', rows);
           callback(rows);
         }
       });
@@ -61,7 +60,7 @@ Database.prototype = {
           logger.error('Error in method getSensorById:', err);
           callback(err);
         } else {
-          logger.trace(row);
+          logger.trace('Row:', row);
           callback(row);
         }
       });
@@ -84,7 +83,7 @@ Database.prototype = {
           logger.error('Error in method createSensor:', err);
           callback(err);
         } else {
-          logger.trace(this.lastID);
+          logger.trace('LastId:', this.lastID);
           callback(this.lastID);
         }
       });
@@ -107,7 +106,7 @@ Database.prototype = {
           logger.error('Error in method updateSensor:', err);
           callback(err);
         } else {
-          logger.trace(this.lastID);
+          logger.trace('LastId:', this.lastID);
           callback(this.lastID);
         }
       });
@@ -130,7 +129,7 @@ Database.prototype = {
           logger.error('Error in method getCurrentUsage:', err);
           callback(err);
         } else {
-          logger.trace(row);
+          logger.trace('Row:', row);
           callback(row);
         }
       });
@@ -151,7 +150,7 @@ Database.prototype = {
           logger.error('Error in method getSensorEvents:', err);
           callback(err);
         } else {
-          logger.trace(rows);
+          logger.trace('Rows:', rows);
           callback(rows);
         }
       });
@@ -173,7 +172,7 @@ Database.prototype = {
           logger.error('Error in method getSensorEventsForId:', err);
           callback(err);
         } else {
-          logger.trace(rows);
+          logger.trace('Rows:', rows);
           callback(rows);
         }
       });
@@ -196,7 +195,7 @@ Database.prototype = {
           logger.error('Error in method createSensorEvent:', err);
           callback(err);
         } else {
-          logger.trace(this.lastID);
+          logger.trace('LastId:', this.lastID);
           callback(this.lastID);
         }
       });
@@ -209,9 +208,9 @@ Database.prototype = {
    * @param {Function} callback Returns either unixepoch or an error.
    */
   getFirstSensorEvent: function(sensorId, callback) {
-    var insertStmt = this.db.prepare(
-      'SELECT Min(Time) as Time FROM SensorEvents WHERE SensorId = $sensorId '
-    );
+    var logger = this.logger;
+
+    var insertStmt = this.db.prepare('SELECT Min(Time) as Time FROM SensorEvents WHERE SensorId = $sensorId ');
 
     insertStmt.get({
         $sensorId: sensorId
@@ -236,172 +235,99 @@ Database.prototype = {
   },
 
   /**
-   * Returns the last recorded history event.
-   * @param {int}      sensorId    Id of the sernsor to retrieve the event for.
-   * @param {sting}    historyType Possible values: MinuteHistory, HourHistory, DayHistory, MonthHistory
-   * @param {Function} callback    Returns either unixepoch or an error.
-   */
-  getLastHistoryEvent: function(sensorId, historyType, callback) {
-
-    var insertStmt = this.db.prepare(
-      'SELECT Max(Time) as Time FROM ' + historyType +
-      'History WHERE SensorId = $sensorId '
-    );
-
-    insertStmt.get({
-        $sensorId: sensorId
-      },
-      function(err, row) {
-        if (err !== null) {
-          this.logger.error(err);
-          callback(err);
-        } else {
-          // err is null if insertion was successful
-          // TODO: Move result logic out of here
-          if (row.Time) {
-            this.logger.debug('Last history event retrieved: ', moment(row.Time).format());
-            callback(row.Time);
-          } else {
-            this.logger.debug('No rows in history table for sensor');
-            // Return now - 1 so rows are processed
-            callback(moment().minutes(0).seconds(0).subtract(1, historyType + 's').valueOf());
-          }
-        }
-      });
-    insertStmt.finalize();
-  },
-
-  /**
    * Processes SensorEvents for a given timespan into the MinuteHistory for a sensor.
    * SensorEvents are deleted after being processed..
-   * @param {int}    sensorId Id of the sernsor to retrieve the event for.
-   * @param {moment} from     Start of the the timespan to process SensorEvent for.
-   * @param {moment} till     End of the the timespan to process SensorEvent for.
-   */
-  cleanSensorEvents: function(sensorId, from, till) {
-    db.serialize(function() {
-      var insertStmt = this.db.prepare(
-        'INSERT INTO MinuteHistory (SensorId, Time, Rate, Usage) ' +
-        'SELECT SensorId, CAST(AVG(Time) - (AVG(Time) % 60000) AS INTEGER) AS Time, Rate, SUM(Volume)AS Usage ' +
-        'FROM SensorEvents AS E JOIN Sensors AS S ON E.SensorId = S.Id ' +
-        'WHERE SensorId = $sensorId AND Time BETWEEN $from AND $till ' +
-        'GROUP BY SensorId'
-      );
-
-      insertStmt.run({
-          $sensorId: sensorId,
-          $from: from.valueOf(),
-          $till: till.valueOf()
-        },
-        function(err) {
-          if (err !== null) {
-            this.logger.error(err);
-            callback(err);
-          } else {
-            // err is null if insertion was successful
-            // TODO: Move result logic out of here
-            this.logger.debug('Minute history updated with rowid: ', this.lastID);
-          }
-        });
-      insertStmt.finalize();
-
-      var deleteStmt = this.db.prepare(
-        'DELETE From SensorEvents WHERE SensorId = $sensorId AND Time BETWEEN $from AND $till'
-      );
-
-      deleteStmt.run({
-          $sensorId: sensorId,
-          $from: from.valueOf(),
-          $till: till.valueOf()
-        },
-        function(err) {
-          if (err !== null) {
-            this.logger.error(err);
-            callback(err);
-          } else {
-            // err is null if insertion was successful
-            // TODO: Move result logic out of here
-            this.logger.debug(
-              'Sensorevents table cleand up for minute, rows affected: ',
-              this.changes);
-          }
-        });
-      deleteStmt.finalize();
-    });
-  },
-
-  /**
-   * Processes HistoryEvents for a given timespan into the nest History table for a sensor.
-   * @param {int}      sensorId Id of the sernsor to update the events for.
+   * @param {int}      sensorId Id of the sernsor to retrieve the event for.
    * @param {moment}   from     Start of the the timespan to process SensorEvent for.
    * @param {moment}   till     End of the the timespan to process SensorEvent for.
-   * @param {string}   source   Possible values: MinuteHistory, HourHistory, DayHistory, MonthHistory
-   * @param {string}   dest     Possible values: MinuteHistory, HourHistory, DayHistory, MonthHistory
-   * @param {Function} callback [description]
+   * @param {Function} callback Returns the number off affected rows or an Error object.
    */
-  updateHistoryEvents: function(sensorId, from, till, source, dest, callback) {
+  processSensorEvents: function(sensorId, from, till, callback) {
+    var logger = this.logger;
+    var db = this.db;
+
     var insertStmt = this.db.prepare(
-      'INSERT OR REPLACE INTO ' + dest + ' (SensorId, Time, Rate, Usage) ' +
-      'SELECT SensorId, CAST(AVG(Time) - (AVG(Time) % ' + from.diff(till) + ') AS INTEGER) AS Time, Rate, SUM(Usage)AS Usage ' +
-      'FROM ' + source +
-      ' WHERE SensorId = $sensorId AND Time BETWEEN $from AND $till ' +
+      'INSERT INTO MinuteHistory (SensorId, Time, Rate, Usage) ' +
+      'SELECT SensorId, CAST(AVG(Time) - (AVG(Time) % 60000) AS INTEGER) AS Time, Rate, SUM(Volume)AS Usage ' +
+      'FROM SensorEvents AS E JOIN Sensors AS S ON E.SensorId = S.Id ' +
+      'WHERE SensorId = $sensorId AND Time BETWEEN $from AND $till ' +
       'GROUP BY SensorId'
     );
 
     insertStmt.run({
-        $sensorId: sensorId,
-        $from: from.valueOf(),
-        $till: till.valueOf()
+        $sensorId: this.sensorId,
+        $from: this.from.valueOf(),
+        $till: this.till.valueOf()
       },
       function(err) {
         if (err !== null) {
-          this.logger.error(err);
+          logger.error('Error in method processSensorEvents during INSERT INTO MinuteHistory:', err);
           callback(err);
         } else {
-          // err is null if insertion was successful
-          // TODO: Move result logic out of here
-          this.logger.debug('History table was updated with rowid: ', this.lastID);
+          logger.trace('LastId:', this.lastID);
 
-          if (callback) {
-            callback(this.lastID);
-          }
+          var deleteStmt = this.db.prepare(
+            'DELETE FROM SensorEvents WHERE SensorId = $sensorId AND Time BETWEEN $from AND $till'
+          );
+
+          deleteStmt.run({
+              $sensorId: this.sensorId,
+              $from: this.from.valueOf(),
+              $till: this.till.valueOf()
+            },
+            function(err) {
+              if (err !== null) {
+                logger.error('Error in method processSensorEvents during DELETE FROM SensorEvents:', err);
+                callback(err);
+              } else {
+                logger.trace('Changes:', this.changes);
+                callback(this.changes);
+              }
+            });
+          deleteStmt.finalize();
         }
       });
     insertStmt.finalize();
   },
 
   /**
-   * Deletes history events from the specified table between a given timespan and sensor.
-   * @param {int}      sensorId Id of the sernsor to delete the events for.
-   * @param {[type]}   from     Start of the the timespan to process SensorEvent for.
-   * @param {moment}   till     End of the the timespan to process SensorEvent for.
-   * @param {string}   table    Possible values: MinuteHistory, HourHistory, DayHistory, MonthHistory
-   * @param {Function} callback Return the number of affected rows or an Error
+   * Deletes history events from the specified HistoryType between a given timespan and sensor.
+   * @param {int}      sensorId    Id of the sernsor to delete the events for.
+   * @param {[type]}   moment      Moment up to which events can be deleted.
+   * @param {string}   historyType Possible values: MinuteHistory, HourHistory.
+   * @param {Function} callback    Return the number of affected rows or an Error object.
    */
-  deleteHistoryEvents: function(sensorId, from, till, table, callback) {
+  deleteHistoryEvents: function(sensorId, from, historyType, callback) {
+    var logger = this.logger;
+
+    if (historyType !== 'MinuteHistory' || historyType !== 'HourHistory') {
+      var err = new Error('Incorrect historyType!');
+      logger.error(err);
+      callback(err);
+    }
+
     var deleteStmt = this.db.prepare(
-      'DELETE From ' + table +
-      ' WHERE SensorId = $sensorId AND Time BETWEEN $from AND $till'
+      'DELETE From ' + historyType + ' WHERE SensorId = $sensorId AND Time < $from'
     );
 
     deleteStmt.run({
         $sensorId: sensorId,
-        $from: from.valueOf(),
-        $till: till.valueOf()
+        $from: from.valueOf()
       },
       function(err) {
         if (err !== null) {
           this.logger.error(err);
           callback(err);
         } else {
-          // err is null if insertion was successful
-          // TODO: Move result logic out of here
-          this.logger.debug(
-            'Sensorevents table cleand up for minute, rows affected: ',
-            this.changes);
+          if (err !== null) {
+            logger.error('Error in method deleteHistoryEvents:', err);
+            callback(err);
+          } else {
+            logger.trace('Changes:', this.changes);
 
-          if (callback) {
-            callback(this.lastID);
+            if (callback) {
+              callback(this.changes);
+            }
           }
         }
       });
