@@ -285,6 +285,8 @@ Database.prototype = {
               }
             });
           deleteStmt.finalize();
+
+          //TODO: Update History Tables as well.
         }
       });
     insertStmt.finalize();
