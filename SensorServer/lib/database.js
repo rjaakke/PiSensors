@@ -21,7 +21,19 @@ Database.prototype = {
       'CREATE TABLE if not exists `HourHistory` (Id	INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE, SensorId INTEGER, Time INTEGER, Rate INTEGER, Usage REAL, UNIQUE(Time, SensorId), FOREIGN KEY(SensorId) REFERENCES Sensors(id));' +
       'CREATE TABLE if not exists `DayHistory` (Id	INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE, SensorId INTEGER, Time INTEGER, Rate INTEGER, Usage REAL, UNIQUE(Time, SensorId), FOREIGN KEY(SensorId) REFERENCES Sensors(id));' +
       'CREATE TRIGGER if not exists UpdateSensorLow AFTER INSERT ON SensorEvents WHEN NEW.Rate = 1 BEGIN UPDATE Sensors SET Low = Low + Volume where Id = NEW.SensorId; END;' +
-      'CREATE TRIGGER if not exists UpdateSensorHigh AFTER INSERT ON SensorEvents WHEN NEW.Rate = 2 BEGIN UPDATE Sensors SET High = High + Volume where Id = NEW.SensorId; END;'
+      'CREATE TRIGGER if not exists UpdateSensorHigh AFTER INSERT ON SensorEvents WHEN NEW.Rate = 2 BEGIN UPDATE Sensors SET High = High + Volume where Id = NEW.SensorId; END;' +
+      'CREATE TRIGGER if not exists UpdateHistory AFTER INSERT ON SensorEvents ' +
+      'BEGIN' +
+      ' INSERT OR REPLACE INTO MinuteHistory (SensorId, Time, Rate, Usage)' +
+      '  SELECT NEW.SensorId, NEW.Time - (NEW.TIme % 60000) AS Time, NEW.Rate as Rate,' +
+      '  COALESCE((SELECT USAGE FROM MinuteHistory WHERE SensorID = NEW.SensorId AND Time = NEW.Time - (NEW.Time % 60000)), 0) + Volume FROM SensorEvents AS E JOIN Sensors AS S ON E.SensorId = S.Id;' +
+      ' INSERT OR REPLACE INTO HourHistory (SensorId, Time, Rate, Usage)' +
+      '  SELECT NEW.SensorId, NEW.Time - (NEW.TIme % 3600000) AS Time, NEW.Rate as Rate,' +
+      '  COALESCE((SELECT USAGE FROM MinuteHistory WHERE SensorID = NEW.SensorId AND Time = NEW.Time - (NEW.Time % 3600000)), 0) + Volume FROM SensorEvents AS E JOIN Sensors AS S ON E.SensorId = S.Id;' +
+      ' INSERT OR REPLACE INTO DayHistory (SensorId, Time, Rate, Usage)' +
+      '  SELECT NEW.SensorId, NEW.Time - (NEW.TIme % 86400000) AS Time, NEW.Rate as Rate,' +
+      '  COALESCE((SELECT USAGE FROM MinuteHistory WHERE SensorID = NEW.SensorId AND Time = NEW.Time - (NEW.Time % 86400000)), 0) + Volume FROM SensorEvents AS E JOIN Sensors AS S ON E.SensorId = S.Id;' +
+      'END;'
     );
   },
 
@@ -203,97 +215,7 @@ Database.prototype = {
   },
 
   /**
-   * Returns the first(oldest) sensorevent from the SensorEvent table.
-   * @param {int}      sensorId Id of the sernsor to retrieve the event for.
-   * @param {Function} callback Returns either unixepoch or an error.
-   */
-  getFirstSensorEvent: function(sensorId, callback) {
-    var logger = this.logger;
-
-    var insertStmt = this.db.prepare('SELECT Min(Time) as Time FROM SensorEvents WHERE SensorId = $sensorId ');
-
-    insertStmt.get({
-        $sensorId: sensorId
-      },
-      function(err, row) {
-        if (err !== null) {
-          this.logger.error(err);
-          callback(err);
-        } else {
-          // err is null if insertion was successful
-          // TODO: Move result logic out of here
-          if (row.Time) {
-            this.logger.debug('Oldeste SensorEvent retrieved: ', moment(row.Time).format());
-            callback(row.Time);
-          } else {
-            this.logger.debug('No rows in history table for sensor');
-            callback(moment().valueOf()); // Return now so no rows are processed
-          }
-        }
-      });
-    insertStmt.finalize();
-  },
-
-  /**
-   * Processes SensorEvents for a given timespan into the MinuteHistory for a sensor.
-   * SensorEvents are deleted after being processed..
-   * @param {int}      sensorId Id of the sernsor to retrieve the event for.
-   * @param {moment}   from     Start of the the timespan to process SensorEvent for.
-   * @param {moment}   till     End of the the timespan to process SensorEvent for.
-   * @param {Function} callback Returns the number off affected rows or an Error object.
-   */
-  processSensorEvents: function(sensorId, from, till, callback) {
-    var logger = this.logger;
-    var db = this.db;
-
-    var insertStmt = this.db.prepare(
-      'INSERT INTO MinuteHistory (SensorId, Time, Rate, Usage) ' +
-      'SELECT SensorId, CAST(AVG(Time) - (AVG(Time) % 60000) AS INTEGER) AS Time, Rate, SUM(Volume)AS Usage ' +
-      'FROM SensorEvents AS E JOIN Sensors AS S ON E.SensorId = S.Id ' +
-      'WHERE SensorId = $sensorId AND Time BETWEEN $from AND $till ' +
-      'GROUP BY SensorId'
-    );
-
-    insertStmt.run({
-        $sensorId: this.sensorId,
-        $from: this.from.valueOf(),
-        $till: this.till.valueOf()
-      },
-      function(err) {
-        if (err !== null) {
-          logger.error('Error in method processSensorEvents during INSERT INTO MinuteHistory:', err);
-          callback(err);
-        } else {
-          logger.trace('LastId:', this.lastID);
-
-          var deleteStmt = this.db.prepare(
-            'DELETE FROM SensorEvents WHERE SensorId = $sensorId AND Time BETWEEN $from AND $till'
-          );
-
-          deleteStmt.run({
-              $sensorId: this.sensorId,
-              $from: this.from.valueOf(),
-              $till: this.till.valueOf()
-            },
-            function(err) {
-              if (err !== null) {
-                logger.error('Error in method processSensorEvents during DELETE FROM SensorEvents:', err);
-                callback(err);
-              } else {
-                logger.trace('Changes:', this.changes);
-                callback(this.changes);
-              }
-            });
-          deleteStmt.finalize();
-
-          //TODO: Update History Tables as well.
-        }
-      });
-    insertStmt.finalize();
-  },
-
-  /**
-   * Deletes history events from the specified HistoryType between a given timespan and sensor.
+   * Deletes history events from the specified HistoryType and sensor from before a certain moment.
    * @param {int}      sensorId    Id of the sernsor to delete the events for.
    * @param {[type]}   moment      Moment up to which events can be deleted.
    * @param {string}   historyType Possible values: MinuteHistory, HourHistory.
