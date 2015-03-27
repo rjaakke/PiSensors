@@ -17,23 +17,8 @@ Database.prototype = {
     this.db.exec(
       'CREATE TABLE if not exists Sensors (Id INTEGER PRIMARY KEY UNIQUE, Name STRING, Units STRING, High REAL, Low REAL, Volume REAL);' +
       'CREATE TABLE if not exists SensorEvents (Id INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE, SensorId INTEGER, Time INTEGER, Rate INTEGER, UNIQUE(Time, SensorId), FOREIGN KEY(SensorId) REFERENCES Sensors(id));' +
-      'CREATE TABLE if not exists `MinuteHistory` (Id	INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE, SensorId INTEGER, Time INTEGER, Rate INTEGER, Usage REAL, UNIQUE(Time, SensorId), FOREIGN KEY(SensorId) REFERENCES Sensors(id));' +
-      'CREATE TABLE if not exists `HourHistory` (Id	INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE, SensorId INTEGER, Time INTEGER, Rate INTEGER, Usage REAL, UNIQUE(Time, SensorId), FOREIGN KEY(SensorId) REFERENCES Sensors(id));' +
-      'CREATE TABLE if not exists `DayHistory` (Id	INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE, SensorId INTEGER, Time INTEGER, Rate INTEGER, Usage REAL, UNIQUE(Time, SensorId), FOREIGN KEY(SensorId) REFERENCES Sensors(id));' +
       'CREATE TRIGGER if not exists UpdateSensorLow AFTER INSERT ON SensorEvents WHEN NEW.Rate = 1 BEGIN UPDATE Sensors SET Low = Low + Volume where Id = NEW.SensorId; END;' +
-      'CREATE TRIGGER if not exists UpdateSensorHigh AFTER INSERT ON SensorEvents WHEN NEW.Rate = 2 BEGIN UPDATE Sensors SET High = High + Volume where Id = NEW.SensorId; END;' +
-      'CREATE TRIGGER if not exists UpdateHistory AFTER INSERT ON SensorEvents ' +
-      'BEGIN' +
-      ' INSERT OR REPLACE INTO MinuteHistory (SensorId, Time, Rate, Usage)' +
-      '  SELECT NEW.SensorId, NEW.Time - (NEW.TIme % 60000) AS Time, NEW.Rate as Rate,' +
-      '  COALESCE((SELECT USAGE FROM MinuteHistory WHERE SensorID = NEW.SensorId AND Time = NEW.Time - (NEW.Time % 60000)), 0) + Volume FROM SensorEvents AS E JOIN Sensors AS S ON E.SensorId = S.Id;' +
-      ' INSERT OR REPLACE INTO HourHistory (SensorId, Time, Rate, Usage)' +
-      '  SELECT NEW.SensorId, NEW.Time - (NEW.TIme % 3600000) AS Time, NEW.Rate as Rate,' +
-      '  COALESCE((SELECT USAGE FROM MinuteHistory WHERE SensorID = NEW.SensorId AND Time = NEW.Time - (NEW.Time % 3600000)), 0) + Volume FROM SensorEvents AS E JOIN Sensors AS S ON E.SensorId = S.Id;' +
-      ' INSERT OR REPLACE INTO DayHistory (SensorId, Time, Rate, Usage)' +
-      '  SELECT NEW.SensorId, NEW.Time - (NEW.TIme % 86400000) AS Time, NEW.Rate as Rate,' +
-      '  COALESCE((SELECT USAGE FROM MinuteHistory WHERE SensorID = NEW.SensorId AND Time = NEW.Time - (NEW.Time % 86400000)), 0) + Volume FROM SensorEvents AS E JOIN Sensors AS S ON E.SensorId = S.Id;' +
-      'END;'
+      'CREATE TRIGGER if not exists UpdateSensorHigh AFTER INSERT ON SensorEvents WHEN NEW.Rate = 2 BEGIN UPDATE Sensors SET High = High + Volume where Id = NEW.SensorId; END;'
     );
   },
 
@@ -215,28 +200,21 @@ Database.prototype = {
   },
 
   /**
-   * Deletes history events from the specified HistoryType and sensor from before a certain moment.
+   * Deletes sensorevents for the specified sensor from before a certain moment.
    * @param {int}      sensorId    Id of the sernsor to delete the events for.
-   * @param {[type]}   moment      Moment up to which events can be deleted.
-   * @param {string}   historyType Possible values: MinuteHistory, HourHistory.
+   * @param {string}   moment      Moment up to which events can be deleted.
    * @param {Function} callback    Return the number of affected rows or an Error object.
    */
-  deleteHistoryEvents: function(sensorId, from, historyType, callback) {
+  deleteSensorEventsHistory: function(sensorId, from, callback) {
     var logger = this.logger;
 
-    if (historyType !== 'MinuteHistory' || historyType !== 'HourHistory') {
-      var err = new Error('Incorrect historyType!');
-      logger.error(err);
-      callback(err);
-    }
-
     var deleteStmt = this.db.prepare(
-      'DELETE From ' + historyType + ' WHERE SensorId = $sensorId AND Time < $from'
+      'DELETE From SensorEvents WHERE SensorId = $sensorId AND Time < $from'
     );
 
     deleteStmt.run({
         $sensorId: sensorId,
-        $from: from.valueOf()
+        $from: from
       },
       function(err) {
         if (err !== null) {
@@ -244,7 +222,7 @@ Database.prototype = {
           callback(err);
         } else {
           if (err !== null) {
-            logger.error('Error in method deleteHistoryEvents:', err);
+            logger.error('Error in method deleteSensorEventsHistory:', err);
             callback(err);
           } else {
             logger.trace('Changes:', this.changes);
