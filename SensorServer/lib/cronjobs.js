@@ -14,7 +14,7 @@ CronJobs.prototype = {
 
   historyCleanJobDef: function() {
     /**
-     * Cleanup MinuteTable Monthly
+     * Cleanup SensorEvents for data older then 2 years?
      */
 
     //TODO: implment this
