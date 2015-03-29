@@ -82,8 +82,9 @@ client.validateUrl(function(err) {
     }
 
     logger.info('Start reading sensor');
+    app = new app(sensorInfo);
     //TODO Uncomment
-    //sensor.watch(client.postEventData);
+    //app.watch(client.postEventData);
   });
 });
 
