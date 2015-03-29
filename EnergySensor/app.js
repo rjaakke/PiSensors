@@ -3,8 +3,7 @@
  */
 var moment = require('moment');
 var log4js = require('log4js');
-//TODO Uncomment
-//var GPIO = require('onoff').Gpio;
+var GPIO = require('onoff').Gpio; //NOTE Comment this when GPIO is not available
 
 /**
  * [App constructor]

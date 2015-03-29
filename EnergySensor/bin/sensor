@@ -83,8 +83,8 @@ client.validateUrl(function(err) {
 
     logger.info('Start reading sensor');
     app = new app(sensorInfo);
-    //TODO Uncomment
-    //app.watch(client.postEventData.bind(client));
+    //NOTE Comment this when GPIO is not available
+    app.watch(client.postEventData.bind(client));
   });
 });
 
