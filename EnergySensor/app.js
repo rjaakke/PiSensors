@@ -44,7 +44,7 @@ App.prototype = {
     var currentInterval = currentEvent.diff(this.previousEvent);
     var intervalFactor = this.previousInterval / currentInterval;
     var date = new Date();
-    var currentRate = date.getHours() <= 7 ? 1 : 2; //Rate 1 is Low and 2 is High
+    var currentRate = date.getHours() <= 7 ? 1 : date.getDay() === 0 || date.getDay() === 6 ? 1 : 2; //Rate 1 is Low and 2 is High
 
     if (currentInterval > 30) {
       if (intervalFactor < 1 && this.firstEvent === false) {
