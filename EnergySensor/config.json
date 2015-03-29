@@ -3,12 +3,12 @@
   "name": "Elektriciteit",
   "units": "kWh",
   "high": 22330,
-  "low": 24365,
+  "low": 24542,
   "volume": 0.00266666666667,
 
   "appenders": [{
     "type": "file",
-    "filename": "logs/server.log",
+    "filename": "logs/sensor.log",
     "maxLogSize": 10485760,
     "backups": 10,
     "pollInterval": 15
