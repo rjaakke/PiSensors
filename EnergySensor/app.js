@@ -66,7 +66,7 @@ App.prototype = {
           if (err instanceof Error) {
             this.logger.warm('Event logging failed!');
           }
-        }).bind(this);
+        });
 
       } else if (this.firstEvent === true) {
         this.firstEvent = false;
