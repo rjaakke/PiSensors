@@ -57,7 +57,10 @@ RestClient.prototype = {
               sensorinfo: sensorInfo
             }).on('complete',
               function(data, response) {
-                if (response instanceof Error || response.statusCode != 200) {
+                if (data instanceof Error) {
+                  logger.error('HTTP POST failed:', data);
+                  callback(response);
+                } else if (response.statusCode != 200) {
                   logger.error('HTTP POST failed:', response.statusCode);
                   callback(response);
                 } else {
@@ -72,7 +75,10 @@ RestClient.prototype = {
               sensorinfo: sensorInfo
             }).on('complete',
               function(data, response) {
-                if (response instanceof Error || response.statusCode != 200) {
+                if (data instanceof Error) {
+                  logger.error('HTTP POST failed:', data);
+                  callback(response);
+                } else if (response.statusCode != 200) {
                   logger.error('HTTP POST failed:', response.statusCode);
                   callback(response);
                 } else {
@@ -97,7 +103,10 @@ RestClient.prototype = {
       eventdata: eventData
     }).on('complete',
       function(data, response) {
-        if (response instanceof Error || response.statusCode != 200) {
+        if (data instanceof Error) {
+          logger.error('HTTP POST failed:', data);
+          callback(response);
+        } else if (response.statusCode != 200) {
           logger.error('HTTP POST failed:', response.statusCode);
           callback(response);
         } else {
