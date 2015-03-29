@@ -60,6 +60,7 @@ RestClient.prototype = {
           if (data) {
             logger.info('Sensor allready registered!');
 
+            log.trace('Submitting sensorinfo:', sensorInfo);
             restler.putJson(url + '/api/sensors', {
               sensorinfo: sensorInfo
             }).on('complete',
@@ -78,6 +79,7 @@ RestClient.prototype = {
           } else {
             logger.info("No sensor was registered, registering sensor now.");
 
+            log.trace('Submitting sensorinfo:', sensorInfo);
             restler.postJson(url + '/api/sensors', {
               sensorinfo: sensorInfo
             }).on('complete',
@@ -106,6 +108,7 @@ RestClient.prototype = {
   postEventData: function(eventData, callback) {
     var logger = this.logger;
 
+    log.trace('Submitting eventdata:', eventData);
     restler.postJson(this.url + '/api/sensorevents', {
       eventdata: eventData
     }).on('complete',
