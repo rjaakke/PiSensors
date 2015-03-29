@@ -1,1 +1,1 @@
-forever start -o ./logs/out.log -e ./logs/err.log ./bin/sensor
+forever start -e ./logs/err.log ./bin/sensor
