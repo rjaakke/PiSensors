@@ -10,9 +10,10 @@ history tables and offer a UI to view the data.
 TODO
 ----
 
--   Compete REST API with some JSON object for Views and History
--   Auth?
--   Implement CronJob for cleaning up historys.
+- Compete REST API with some JSON object for Views and History
+- Auth?
+- Implement CronJob for cleaning up historys.
+- Logging need to be set at global level.
 
 Database Tables
 ---------------

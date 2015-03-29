@@ -9,19 +9,22 @@ var log4js = require('log4js');
 var http = require('http');
 var nconf = require('nconf')
   .argv({
-    'loglevel': {
-      alias: 'l',
-      default: 'debug',
-      describe: 'Specify loglevel, debug or info.',
+    'file': {
+      alias: 'f',
+      default: './config.json',
+      describe: 'Specify configuration file path.',
       string: true
     }
   });
 
 /**
- * Setup the logger
+ * Read logfile configuration and setup logger
  */
-var logger = log4js.getLogger();
-logger.setLevel(nconf.get('loglevel'));
+log4js.configure(nconf.get('file'), {
+  reloadSecs: 300
+});
+
+var logger = log4js.getLogger('Server');
 
 /**
  * Get port from environment and store in Express.

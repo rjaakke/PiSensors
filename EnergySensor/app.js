@@ -6,6 +6,13 @@ var log4js = require('log4js');
 var GPIO = require('onoff').Gpio; //NOTE Comment this when GPIO is not available
 
 /**
+ * Read logfile configuration
+ */
+log4js.configure('config.json', {
+  reloadSecs: 300
+});
+
+/**
  * [App constructor]
  * @param {[SensorInfo]} sensorInfo [The SensorInfo object containing all sensor values.]
  */
@@ -16,7 +23,7 @@ var App = function(sensorInfo) {
   });
 
   this.sensorInfo = sensorInfo;
-  this.logger = log4js.getLogger();
+  this.logger = log4js.getLogger('Sensor.App');
   this.previousEvent = moment();
   this.firstEvent = true;
   this.previousInterval = 0;

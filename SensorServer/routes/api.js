@@ -2,9 +2,16 @@ var log4js = require('log4js');
 var express = require('express');
 var database = require('../lib/database');
 
+/**
+ * Read logfile configuration
+ */
+log4js.configure('config.json', {
+  reloadSecs: 300
+});
+
 var database = new database();
 var router = express.Router();
-var logger = log4js.getLogger();
+var logger = log4js.getLogger('Server.API');
 
 /**
  * GET welcome message.
@@ -78,7 +85,7 @@ router.route('/sensors').post(function(req, res, next) {
         next(result);
       } else {
         res.json(result);
-        logger.debug('New sensor created with id:', result);
+        logger.info('New sensor created with id:', result);
       }
     });
   }
@@ -101,7 +108,7 @@ router.route('/sensors').put(function(req, res, next) {
         next(result);
       } else {
         res.json(result);
-        logger.debug('Updated sensor with:', sensorInfo);
+        logger.info('Updated sensor with:', sensorInfo);
       }
     });
   }

@@ -10,6 +10,7 @@ TODO
 -   Try to determine sensor noise on standard deviation,
 -   Implement debug package
 -   Maybe change log package
+-   Logging need to be set at global level.
 
 Hardware setup
 --------------

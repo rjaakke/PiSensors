@@ -20,14 +20,8 @@ var nconf = require('nconf')
     },
     'file': {
       alias: 'f',
-      default: './sensor.json',
+      default: './config.json',
       describe: 'Specify configuration file path.',
-      string: true
-    },
-    'loglevel': {
-      alias: 'l',
-      default: 'debug',
-      describe: 'Specify loglevel, debug or info.',
       string: true
     },
     'url': {
@@ -51,8 +45,13 @@ nconf.defaults({
   'c': '1'
 });
 
-var logger = log4js.getLogger();
-logger.setLevel(nconf.get('loglevel'));
+/**
+ * Read logfile configuration and setup logger
+ */
+log4js.configure(nconf.get('file'), {
+  reloadSecs: 300
+});
+var logger = log4js.getLogger('Sensor');
 
 var url = nconf.get('url');
 

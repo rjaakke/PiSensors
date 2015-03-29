@@ -1,9 +1,16 @@
 var sqlite3 = require('sqlite3').verbose();
 var log4js = require('log4js');
 
+/**
+ * Read logfile configuration
+ */
+log4js.configure('config.json', {
+  reloadSecs: 300
+});
+
 var Database = function() {
   this.db = new sqlite3.Database('./data/sensordata.db');
-  this.logger = log4js.getLogger();
+  this.logger = log4js.getLogger('Server.Database');
 
   //Prepare the database if it doens't exist
   this.db.serialize(this.setupDatabase());

@@ -1,0 +1,19 @@
+{
+  "id": 1,
+  "name": "Elektriciteit",
+  "units": "kWh",
+  "high": 22330,
+  "low": 24365,
+  "volume": 0.00266666666667,
+
+  "appenders": [{
+    "type": "file",
+    "filename": "logs/server.log",
+    "maxLogSize": 10485760,
+    "backups": 10,
+    "pollInterval": 15
+  }],
+  "levels": {
+    "[all]": "INFO"
+  }
+}

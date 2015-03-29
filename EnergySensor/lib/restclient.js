@@ -5,12 +5,19 @@ var restler = require('restler');
 var log4js = require('log4js');
 
 /**
+ * Read logfile configuration
+ */
+log4js.configure('config.json', {
+  reloadSecs: 300
+});
+
+/**
  * RestClient constructor
  * @param {string} url The URL that is used to perfrom all REST operations.
  */
 var RestClient = function(url) {
   this.url = url;
-  this.logger = log4js.getLogger();
+  this.logger = log4js.getLogger('RestClient');
 
   this.logger.info('Setting up client:', url);
 };
