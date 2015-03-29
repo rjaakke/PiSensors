@@ -65,7 +65,7 @@ App.prototype = {
           ' current usage:' + currentWatt);
 
         this.onSensorEvent({
-          sensorId: this.sensorInfo.sensorId,
+          sensorId: this.sensorInfo.id,
           time: currentEvent.valueOf(),
           rate: currentRate
         }, function(err) {
