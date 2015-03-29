@@ -2,6 +2,34 @@ doctype html
 html
   head
     title= title
+    link(rel='stylesheet', href='/lib/bootstrap/dist/css/bootstrap.min.css')
+    link(rel='stylesheet', href='/lib/bootstrap/dist/css/bootstrap-theme.min.css')
     link(rel='stylesheet', href='/css/style.css')
   body
-    block content
+    div(class='navbar navbar-default navbar-fixed-top', role='navigation')
+      div(class='container')
+        div(div class='navbar-header')
+          button(class='btn btn-success navbar-toggle' data-toggle='collapse' data-target='.navbar-collapse')
+            span(class='glyphicon glyphicon-chevron-down')
+          div(id='logo')
+            a(href='/')
+              h4 #{title}
+          div(class='navbar-collapse collapse')
+            ul(class='nav navbar-nav navbar-right')
+              li(class='nav')
+                a(href='/') Home
+              li(class='nav')
+                a(href='/now') Current Usage
+    section(id='body' class='container')
+      div(class='page-header')
+        h1= title
+      block content
+    hr    
+    footer(class='container') 
+      p Copyright (c) PiSensors
+      
+    block scripts
+      script(src='/lib/jquery/dist/jquery.min.js')
+      script(src='/lib/bootstrap/dist/js/bootstrap.min.js')
+      script(src='/lib/bootstrap/dist/js/bootstrap.min.js')
+      
