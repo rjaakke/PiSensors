@@ -29,14 +29,14 @@ App.prototype = {
   watch: function(callback) {
     if (callback && typeof(callback) === "function") {
       this.onSensorEvent = callback;
-      this.sensor.watch(sensorEventHandler);
+      this.sensor.watch(this.sensorEventHandler.bind(this));
     } else {
       this.logger.warn('No callback supplied, aborted watching!');
     }
   },
 
   unwatch: function() {
-    this.sensor.unwatch(sensorEventHandler);
+    this.sensor.unwatch(this.sensorEventHandler);
   },
 
   sensorEventHandler: function(err, state) {
@@ -66,7 +66,7 @@ App.prototype = {
           if (err instanceof Error) {
             this.logger.warm('Event logging failed!');
           }
-        });
+        }).bind(this);
 
       } else if (this.firstEvent === true) {
         this.firstEvent = false;
@@ -81,7 +81,7 @@ App.prototype = {
       this.previousInterval = currentInterval;
     } else {
 
-      this.logger.debug('Singal bounce ignored, interval: ' + currentInterval + 'ms');
+      this.logger.trace('Singal bounce ignored, interval: ' + currentInterval + 'ms');
     }
   }
 };
