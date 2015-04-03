@@ -2,7 +2,13 @@ body {
   padding: 50px;
   font: 14px "Lucida Grande", Helvetica, Arial, sans-serif;
 }
-
 a {
   color: #00B7FF;
+}
+#chart_div {
+  width: 100% !important;
+}
+.dygraph-legend {
+  background-color: transparent !important;
+  left: 75px !important;
 }

@@ -122,19 +122,42 @@ Database.prototype = {
    * @param {int}      sensorId The id of the sensors
    * @param {Function} callback Returns either the row or the Error.
    */
-  getCurrentUsage: function(sensorId, callback) {
+  getSensorInfo: function(sensorId, callback) {
     var logger = this.logger;
 
-    var stmt = this.db.prepare('SELECT High, Low, High + Low AS Total, 3600000 / ((1/Volume) * (Time - (SELECT Time FROM SensorEvents WHERE SensorId = ?1 ORDER BY Id DESC LIMIT 1 OFFSET 1))) * 1000 AS Usage, DateTime(Time/1000, \'unixepoch\', \'localtime\') AS UsageTime FROM SensorEvents AS E JOIN Sensors AS S ON E.SensorId = S.Id  WHERE SensorId = ?1 ORDER BY E.Id DESC LIMIT 1;');
+    var stmt = this.db.prepare('SELECT Name, Units, High, Low, High + Low AS Total, 3600000000 / ((1/Volume) * (Time - (SELECT Time FROM SensorEvents WHERE SensorId = ?1 ORDER BY Id DESC LIMIT 1 OFFSET 1))) AS Usage, DateTime(Time/1000, \'unixepoch\', \'localtime\') AS UsageTime FROM SensorEvents AS E JOIN Sensors AS S ON E.SensorId = S.Id  WHERE SensorId = ?1 ORDER BY E.Id DESC LIMIT 1;');
 
     stmt.get(sensorId,
       function(err, row) {
         if (err !== null) {
-          logger.error('Error in method getCurrentUsage:', err);
+          logger.error('Error in method getSensorInfo:', err);
           callback(err);
         } else {
           logger.trace('Row:', row);
           callback(row);
+        }
+      });
+    stmt.finalize();
+  },
+
+  /**
+   * Returns the last 60 minutes usage information for a sensor.
+   * @param {int}      sensorId The id of the sensors
+   * @param {Function} callback Returns either the row or the Error.
+   */
+  getSensorUsageForId: function(sensorId, callback) {
+    var logger = this.logger;
+
+    var stmt = this.db.prepare('SELECT * FROM (SELECT CAST(Time - (Time % 60000) AS INTEGER) AS Time, Rate, COUNT(Volume) AS Usage, Volume FROM SensorEvents AS E JOIN Sensors AS S ON E.SensorId = S.Id WHERE SensorId = ? GROUP BY CAST(Time - (Time % 60000) AS INTEGER) ORDER BY Time DESC LIMIT 60) ORDER BY TIME ASC;');
+
+    stmt.all(sensorId,
+      function(err, rows) {
+        if (err !== null) {
+          logger.error('Error in method getSensorEventsForId:', err);
+          callback(err);
+        } else {
+          logger.trace('Rows:', rows);
+          callback(rows);
         }
       });
     stmt.finalize();

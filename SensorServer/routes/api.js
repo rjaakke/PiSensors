@@ -115,19 +115,19 @@ router.route('/sensors').put(function(req, res, next) {
 });
 
 /**
- * Current Usage route
+ * Sesnor Info route
  */
-router.route('/now/:id').get(function(req, res, next) {
+router.route('/info/:id').get(function(req, res, next) {
 
   var sensorId = req.params.id;
 
-  database.getCurrentUsage(sensorId, function(result) {
+  database.getSensorInfo(sensorId, function(result) {
     if (result instanceof Error) {
       next(result);
     } else {
       if (result) {
         res.json(result);
-        logger.debug('Current usage:' + JSON.stringify(result, null, 2));
+        logger.debug('Sensor Info:' + JSON.stringify(result, null, 2));
       } else {
         res.json();
         logger.debug('No sensor registered with id:', sensorId);
