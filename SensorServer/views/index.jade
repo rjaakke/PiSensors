@@ -1,0 +1,13 @@
+extends layout
+
+block content
+  div(id='chart_div')
+  script(src='/lib/dygraphs/dygraph-combined.js')
+  script(type='text/javascript'). 
+    g = new Dygraph(document.getElementById('chart_div'), !{data}, {
+      labels: ['Time', 'Value'],
+      drawPoints: true,
+      labelsSeparateLines: true,
+      showRangeSelector: true,
+    });
+    
