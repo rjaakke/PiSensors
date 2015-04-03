@@ -141,14 +141,14 @@ Database.prototype = {
   },
 
   /**
-   * Returns the last 24 hours usage information for a sensor.
+   * Returns the last 24 hours usage information for a sensor in 5minute interval.
    * @param {int}      sensorId The id of the sensors
    * @param {Function} callback Returns either the row or the Error.
    */
   getSensorUsageForId: function(sensorId, callback) {
     var logger = this.logger;
 
-    var stmt = this.db.prepare('SELECT * FROM (SELECT CAST(Time - (Time % 60000) AS INTEGER) AS Time, Rate, COUNT(Volume) AS Usage, Volume FROM SensorEvents AS E JOIN Sensors AS S ON E.SensorId = S.Id WHERE SensorId = ? GROUP BY CAST(Time - (Time % 60000) AS INTEGER) ORDER BY Time DESC LIMIT 1440) ORDER BY TIME ASC;');
+    var stmt = this.db.prepare('SELECT * FROM (SELECT CAST(Time - (Time % 300000) AS INTEGER) AS Time, Rate, COUNT(Volume) AS Usage, Volume FROM SensorEvents AS E JOIN Sensors AS S ON E.SensorId = S.Id WHERE SensorId = ? GROUP BY CAST(Time - (Time % 300000) AS INTEGER) ORDER BY Time DESC LIMIT 288) ORDER BY TIME ASC;');
 
     stmt.all(sensorId,
       function(err, rows) {

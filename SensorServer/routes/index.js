@@ -25,7 +25,7 @@ router.get('/', function(req, res, next) {
     } else {
       if (result.length > 0) {
         result.forEach(function(row) {
-          data.push('[new Date(' + row.Time + '),' + (3600000000 / ((1 / row.Volume) * 60000) * row.Usage) + ']');
+          data.push('[new Date(' + row.Time + '),' + (3600000000 / ((1 / row.Volume) * 300000) * row.Usage) + ']');
         });
 
         res.render('index', {
